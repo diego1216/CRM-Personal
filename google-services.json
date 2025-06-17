@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "458768320497",
+    "project_id": "crmpersonal-f90a8",
+    "storage_bucket": "crmpersonal-f90a8.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:458768320497:android:632be3e68d096855716650",
+        "android_client_info": {
+          "package_name": "com.empresa.crmpersonal"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAYvS3RYG0-T_VuMbyl_BLqEFWuV2FNagk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

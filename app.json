@@ -1,0 +1,10 @@
+{
+  "android": {
+    "package": "com.diegolopezarana.crmpersonal"
+  },
+  "extra": {
+    "eas": {
+      "projectId": "dba6a23e-589b-4624-9754-b3cd7787cbbf"
+    }
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "fb08c5df-f78d-4c40-aa4a-9909aa1f6dca"
+      }
+    },
+    "android": {
+      "package": "com.diegolopezarana.pushbackend"
+    },
+    "plugins": [
+      "expo-build-properties"
+    ]
+  }
+}
