@@ -23,6 +23,10 @@ const HomeScreen = () => {
           label="Ver eventos del calendario 📆"
           onPress={() => navigation.navigate('Calendar')}
         />
+        <PrimaryButton
+           label="Ir al Dashboard 📊"
+           onPress={() => navigation.navigate('Dashboard')}
+        />
       </View>
     </View>
   );

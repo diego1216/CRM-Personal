@@ -1,10 +1,38 @@
 {
-  "android": {
-    "package": "com.diegolopezarana.crmpersonal"
-  },
-  "extra": {
-    "eas": {
-      "projectId": "dba6a23e-589b-4624-9754-b3cd7787cbbf"
-    }
+  "expo": {
+    "name": "CRMPERSONAL",
+    "slug": "crmpersonal",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "android": {
+      "package": "com.diegolopezarana.crmpersonal",
+      "permissions": [
+        "READ_CONTACTS",
+        "READ_CALENDAR",
+        "WRITE_CALENDAR",
+        "NOTIFICATIONS"
+      ],
+      "googleServicesFile": "./google-services.json",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "dba6a23e-589b-4624-9754-b3cd7787cbbf"
+      }
+    },
+    "owner": "diegolopezarana"
   }
 }
