@@ -1,26 +1,51 @@
 import { useEffect, useState } from 'react';
-import { getDeviceContacts } from '../../../data/datasources/ContactsDatasource';
 import * as Contacts from 'expo-contacts';
+import { Contact } from '../../../domain/entities/Contact';
+import { useScheduledEventStore } from '../../../store/scheduleStore';
 
 export const useContactsViewModel = () => {
-  const [contacts, setContacts] = useState<Contacts.Contact[]>([]);
+  const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const loadContacts = async () => {
-    try {
-      const data = await getDeviceContacts();
-      setContacts(data);
-    } catch (e: any) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const events = useScheduledEventStore(state => state.events);
 
   useEffect(() => {
-    loadContacts();
-  }, []);
+    (async () => {
+      try {
+        const { status } = await Contacts.requestPermissionsAsync();
+        if (status !== 'granted') throw new Error('Permiso denegado');
+
+        const { data } = await Contacts.getContactsAsync({
+          fields: [Contacts.Fields.PhoneNumbers],
+        });
+
+        const enrichedContacts: Contact[] = data.map(contact => {
+          const upcoming = events
+            .filter(e => e.contactId === contact.id)
+            .sort((a, b) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime())[0];
+
+          return {
+            id: contact.id,
+            name: contact.name,
+            phoneNumbers: contact.phoneNumbers,
+            nextEvent: upcoming
+              ? {
+                  date: upcoming.datetime,
+                  priority: upcoming.priority,
+                  color: upcoming.color,
+                }
+              : undefined,
+          };
+        });
+
+        setContacts(enrichedContacts);
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [events]);
 
   return { contacts, loading, error };
 };
