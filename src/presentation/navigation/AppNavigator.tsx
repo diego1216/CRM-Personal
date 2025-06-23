@@ -6,6 +6,7 @@ import ContactsScreen from '../../ui/screens/contactsScreen';
 import CalendarScreen from '../../ui/screens/CalendarScreen';
 import DashboardScreen from '../../ui/screens/DashboardScreen';
 import RelationshipDetailScreen from '../../ui/screens/RelationshipDetailScreen';
+import ScheduleFromCalendarScreen from '../../ui/screens/ScheduleEventScreen';
 
 export type RootStackParamList = {
   Home: undefined;
@@ -13,6 +14,7 @@ export type RootStackParamList = {
   Calendar: undefined;
   Dashboard:undefined;
   RelationshipDetail: { contactId: string };
+  ScheduleEvent:undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -26,6 +28,8 @@ const AppNavigator = () => {
         <Stack.Screen name="Calendar" component={CalendarScreen} />
         <Stack.Screen name="Dashboard" component={DashboardScreen} />
         <Stack.Screen name="RelationshipDetail" component={RelationshipDetailScreen} />
+        <Stack.Screen name="ScheduleEvent" component={ScheduleFromCalendarScreen} />
+
 
       </Stack.Navigator>
     </NavigationContainer>

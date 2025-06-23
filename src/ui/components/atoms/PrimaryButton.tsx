@@ -20,8 +20,8 @@ const styles = StyleSheet.create({
   button: {
     backgroundColor: '#007AFF',
     borderRadius: 10,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
+    paddingVertical: 15,
+    paddingHorizontal: 10,
     marginVertical: 8,
     alignItems: 'center',
   },

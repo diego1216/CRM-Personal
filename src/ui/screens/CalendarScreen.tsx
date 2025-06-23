@@ -1,15 +1,18 @@
 import React, { useState } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, Modal } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, Modal, Button } from 'react-native';
 import { useScheduledEventStore } from '../../store/scheduleStore';
 import { Calendar } from 'react-native-calendars';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../presentation/navigation/AppNavigator';
 
 const CalendarScreen = () => {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { events } = useScheduledEventStore();
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [showList, setShowList] = useState(false);
 
-  // Eventos agrupados por fecha
   const grouped = events.reduce<Record<string, typeof events>>((acc, event) => {
     const date = event.datetime.split('T')[0];
     if (!acc[date]) acc[date] = [];
@@ -17,7 +20,6 @@ const CalendarScreen = () => {
     return acc;
   }, {});
 
-  // Marcar fechas con eventos
   const markedDates = Object.keys(grouped).reduce((acc, date) => {
     acc[date] = { marked: true, dotColor: 'yellow' };
     return acc;
@@ -41,6 +43,12 @@ const CalendarScreen = () => {
           {showList ? 'Ocultar eventos' : 'Ver eventos agendados 📋'}
         </Text>
       </TouchableOpacity>
+
+      <Button
+        title="➕ Crear nuevo evento"
+        onPress={() => navigation.navigate('ScheduleEvent')}
+        color="#4CAF50"
+      />
 
       {showList ? (
         <FlatList

@@ -1,91 +1,114 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, Alert } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { useScheduledEventStore } from '../../store/scheduleStore'; // <-- ruta del store
+// src/presentation/screens/ScheduleFromCalendarScreen.tsx
 
-const ScheduleEventScreen = () => {
+import React, { useState } from 'react';
+import { View, Text, Button, TextInput, StyleSheet, Alert, TouchableOpacity, Platform } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { useScheduledEventStore } from '../../store/scheduleStore';
+import { useContactsViewModel } from '../../features/contacts/viewmodel/ContactsViewModel';
+import { Picker } from '@react-native-picker/picker';
+
+const colors = [
+  { label: 'Alta (Rojo)', value: 'red' },
+  { label: 'Media (Naranja)', value: 'orange' },
+  { label: 'Baja (Verde)', value: 'green' },
+];
+
+const ScheduleFromCalendarScreen = () => {
+  const { contacts } = useContactsViewModel();
   const addEvent = useScheduledEventStore((state) => state.addEvent);
 
-  const [contactId, setContactId] = useState('');
-  const [contactName, setContactName] = useState('');
-  const [datetime, setDatetime] = useState(new Date());
+  const [selectedContactId, setSelectedContactId] = useState('');
+  const [selectedDate, setSelectedDate] = useState(new Date());
   const [showPicker, setShowPicker] = useState(false);
-  const [priority, setPriority] = useState('1');
-  const [color, setColor] = useState('#FF0000');
+  const [importanceColor, setImportanceColor] = useState('red');
 
-  const handleSchedule = () => {
-    if (!contactId || !contactName || !priority || !color) {
-      Alert.alert('Completa todos los campos');
-      return;
-    }
+  const handleSave = () => {
+    if (!selectedContactId) return Alert.alert('Selecciona un contacto');
+
+    const contactName = contacts.find((c) => c.id === selectedContactId)?.name || '';
 
     addEvent({
-      contactId,
+      contactId: selectedContactId,
       contactName,
-      datetime: datetime.toISOString(),
-      priority: parseInt(priority),
-      color,
+      datetime: selectedDate.toISOString(),
+      priority: 1, // opcional
+      color: importanceColor,
     });
 
-    Alert.alert('✅ Evento agendado');
-    setContactId('');
-    setContactName('');
-    setPriority('1');
-    setColor('#FF0000');
+    Alert.alert('✅ Evento creado');
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Agendar Evento</Text>
+      <Text style={styles.title}>Crear Evento</Text>
 
-      <TextInput
-        placeholder="ID del contacto"
-        value={contactId}
-        onChangeText={setContactId}
-        style={styles.input}
-      />
-      <TextInput
-        placeholder="Nombre del contacto"
-        value={contactName}
-        onChangeText={setContactName}
-        style={styles.input}
-      />
+      <Text style={styles.label}>Seleccionar contacto:</Text>
+      <View style={styles.pickerWrapper}>
+        <Picker
+          selectedValue={selectedContactId}
+          onValueChange={(value) => setSelectedContactId(value)}
+        >
+          <Picker.Item label="Seleccionar..." value="" />
+          {contacts.map((contact) => (
+            <Picker.Item key={contact.id} label={contact.name} value={contact.id} />
+          ))}
+        </Picker>
+      </View>
 
-      <Button title="Seleccionar fecha y hora" onPress={() => setShowPicker(true)} />
+      <Text style={styles.label}>Seleccionar fecha y hora:</Text>
+      <TouchableOpacity onPress={() => setShowPicker(true)} style={styles.dateButton}>
+        <Text>{selectedDate.toLocaleString()}</Text>
+      </TouchableOpacity>
       {showPicker && (
         <DateTimePicker
-          value={datetime}
+          value={selectedDate}
           mode="datetime"
-          display="default"
-          onChange={(e, date) => {
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={(event, date) => {
             setShowPicker(false);
-            if (date) setDatetime(date);
+            if (date) setSelectedDate(date);
           }}
         />
       )}
 
-      <TextInput
-        placeholder="Prioridad (color HEX)"
-        value={color}
-        onChangeText={setColor}
-        style={styles.input}
-      />
+      <Text style={styles.label}>Importancia (color):</Text>
+      <View style={styles.colorRow}>
+        {colors.map((c) => (
+          <TouchableOpacity
+            key={c.value}
+            style={[
+              styles.colorCircle,
+              { backgroundColor: c.value },
+              importanceColor === c.value && styles.selectedColor,
+            ]}
+            onPress={() => setImportanceColor(c.value)}
+          />
+        ))}
+      </View>
 
-      <Button title="Guardar Evento" onPress={handleSchedule} />
+      <Button title="Guardar Evento" onPress={handleSave} />
     </View>
   );
 };
 
-export default ScheduleEventScreen;
+export default ScheduleFromCalendarScreen;
 
 const styles = StyleSheet.create({
   container: { padding: 20, flex: 1 },
   title: { fontSize: 20, fontWeight: 'bold', marginBottom: 16 },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    marginBottom: 12,
-    padding: 10,
+  label: { marginTop: 12, fontWeight: '600' },
+  pickerWrapper: {
+    borderWidth: 1, borderColor: '#ccc', borderRadius: 6, overflow: 'hidden', marginVertical: 8,
+  },
+  dateButton: {
+    padding: 10, backgroundColor: '#eee', borderRadius: 6, marginTop: 6,
+  },
+  colorRow: { flexDirection: 'row', marginTop: 10 },
+  colorCircle: {
+    width: 30, height: 30, borderRadius: 15, marginRight: 10, borderWidth: 1, borderColor: '#aaa',
+  },
+  selectedColor: {
+    borderWidth: 3,
+    borderColor: '#000',
   },
 });
