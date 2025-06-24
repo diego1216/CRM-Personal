@@ -1,11 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, Platform } from 'react-native';
+import { View, Text, Platform, Alert } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import AppNavigator from './src/presentation/navigation/AppNavigator';
 import { getFCMToken } from './src/data/notification/notifications';
-import { checkAndNotifyOverdueContacts } from './src/domain/usecases/checkAndNotifyOverdueContacts'; // Nueva lógica
+import { checkAndNotifyOverdueContacts } from './src/domain/usecases/checkAndNotifyOverdueContacts';
+import { registerBackgroundTask } from './src/services/backgroundTask';
 
 export default function App() {
   const [expoPushToken, setExpoPushToken] = useState<string | null>(null);
@@ -14,43 +15,41 @@ export default function App() {
   const responseListener = useRef<Notifications.Subscription | null>(null);
 
   useEffect(() => {
-    const initNotifications = async () => {
-      if (Device.isDevice) {
-        const { status } = await Notifications.requestPermissionsAsync();
-        if (status !== 'granted') {
-          alert('Permiso de notificaciones denegado');
-          return;
+    const initialize = async () => {
+      try {
+        if (Device.isDevice) {
+          const { status } = await Notifications.requestPermissionsAsync();
+          if (status !== 'granted') {
+            Alert.alert('❌ Permiso de notificaciones denegado');
+            return;
+          }
         }
-      }
 
-      if (Platform.OS === 'android') {
-        await Notifications.setNotificationChannelAsync('default', {
-          name: 'default',
-          importance: Notifications.AndroidImportance.DEFAULT,
-        });
-      }
+        if (Platform.OS === 'android') {
+          await Notifications.setNotificationChannelAsync('default', {
+            name: 'default',
+            importance: Notifications.AndroidImportance.DEFAULT,
+          });
+        }
 
-      getFCMToken().then(token => {
+        const token = await getFCMToken();
         if (token) {
-          console.log('Expo Push Token:', token);
+          if (__DEV__) console.log('Expo Push Token:', token); // Solo visible en consola de desarrollo
           setExpoPushToken(token);
         }
-      });
 
-      // Verificar contactos vencidos al iniciar
-      checkAndNotifyOverdueContacts();
+        checkAndNotifyOverdueContacts();
+        await registerBackgroundTask();
+      } catch (error) {
+        console.error('Error en initNotifications:', error);
+      }
     };
 
-    initNotifications();
+    initialize();
 
-    // Escuchar notificaciones en primer plano
-    notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
-      setNotification(notification);
-    });
-
-    // Escuchar cuando el usuario toca una notificación
+    notificationListener.current = Notifications.addNotificationReceivedListener(setNotification);
     responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
-      console.log('Usuario tocó la notificación:', response);
+      console.log('👆 Usuario tocó una notificación:', response);
     });
 
     return () => {
@@ -62,21 +61,6 @@ export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <AppNavigator />
-
-      {/* Debug UI */}
-      <View style={{ position: 'absolute', bottom: 20, left: 10, right: 10 }}>
-        <Text style={{ fontWeight: 'bold' }}>Expo Push Token:</Text>
-        <Text selectable>{expoPushToken ?? 'Obteniendo token...'}</Text>
-
-        {notification && (
-          <View style={{ marginTop: 10 }}>
-            <Text style={{ fontWeight: 'bold' }}>🔔 Notificación recibida:</Text>
-            <Text>Título: {notification.request.content.title}</Text>
-            <Text>Cuerpo: {notification.request.content.body}</Text>
-            <Text>Data: {JSON.stringify(notification.request.content.data)}</Text>
-          </View>
-        )}
-      </View>
     </GestureHandlerRootView>
   );
 }

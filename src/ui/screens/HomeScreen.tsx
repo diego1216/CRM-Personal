@@ -24,9 +24,10 @@ const HomeScreen = () => {
           onPress={() => navigation.navigate('Calendar')}
         />
         <PrimaryButton
-           label="Ir al Dashboard 📊"
-           onPress={() => navigation.navigate('Dashboard')}
+          label="Ver notificaciones 🔔"
+          onPress={() => navigation.navigate('OverdueNotifications')}
         />
+
       </View>
     </View>
   );
@@ -47,6 +48,6 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   buttonGroup: {
-    width: '20%',
+    width: '100%',
   },
 });

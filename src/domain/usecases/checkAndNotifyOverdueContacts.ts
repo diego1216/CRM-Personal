@@ -1,11 +1,13 @@
+// src/domain/usecases/checkAndNotifyOverdueContacts.ts
+
 import * as Notifications from 'expo-notifications';
-import { useContactsViewModel } from '../../features/contacts/viewmodel/ContactsViewModel';
+import { useContactStore } from '../../store/contactStore';
 import { useRelationshipStore } from '../../features/relationships/viewmodel/useRelationshipStore';
 import { useScheduledEventStore } from '../../store/scheduleStore';
 import { differenceInDays } from 'date-fns';
 
 export const checkAndNotifyOverdueContacts = () => {
-  const { contacts } = useContactsViewModel.getState();
+  const { contacts } = useContactStore.getState(); 
   const { getPriorityByContactId } = useRelationshipStore.getState();
   const { events } = useScheduledEventStore.getState();
 

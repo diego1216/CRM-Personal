@@ -22,7 +22,7 @@ export const useScheduledEventStore = create<ScheduleState>()(
       addEvent: (event) => {
         const newEvent: ScheduledEvent = {
           ...event,
-          id: Math.random().toString(36).substring(2, 9), // puedes cambiar por uuid
+          id: Math.random().toString(36).substring(2, 9), 
         };
         set((state) => ({
           events: [...state.events, newEvent],
