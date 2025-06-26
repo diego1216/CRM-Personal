@@ -7,6 +7,7 @@ import CalendarScreen from '../../ui/screens/CalendarScreen';
 import RelationshipDetailScreen from '../../ui/screens/RelationshipDetailScreen';
 import ScheduleFromCalendarScreen from '../../ui/screens/ScheduleEventScreen';
 import OverdueNotificationsScreen from '../../ui/screens/OverdueNotificationsScreen';
+import EditEventScreen from '../../ui/screens/EditEventScreen';
 
 
 export type RootStackParamList = {
@@ -14,9 +15,11 @@ export type RootStackParamList = {
   Contacts: undefined;
   Calendar: undefined;
   RelationshipDetail: { contactId: string };
-  ScheduleEvent:undefined;
+  ScheduleEvent: { eventId?: string }; 
   OverdueNotifications: undefined;
+  EditEvent: { eventId: string };
 };
+
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -30,6 +33,8 @@ const AppNavigator = () => {
         <Stack.Screen name="RelationshipDetail" component={RelationshipDetailScreen} />
         <Stack.Screen name="ScheduleEvent" component={ScheduleFromCalendarScreen} />
         <Stack.Screen name="OverdueNotifications" component={OverdueNotificationsScreen} options={{ title: 'Notificaciones' }} />
+        <Stack.Screen name="EditEvent" component={EditEventScreen} />
+
 
 
 

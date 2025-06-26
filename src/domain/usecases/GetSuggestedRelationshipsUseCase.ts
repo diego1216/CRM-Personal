@@ -1,27 +1,23 @@
-import { Relationship } from '../../domain/entities/Relationship';
-import dayjs from 'dayjs';
+import { RelationshipPriority } from '../../features/relationships/viewmodel/useRelationshipStore';
 
-export interface SuggestedRelationship extends Relationship {
-  daysSinceLast: number;
+export interface SimplifiedSuggestedRelationship extends RelationshipPriority {
   overdue: boolean;
 }
 
 export class GetSuggestedRelationshipsUseCase {
-  constructor(private relationships: Relationship[]) {}
+  constructor(private priorities: RelationshipPriority[]) {}
 
-  execute(): SuggestedRelationship[] {
-    return this.relationships.map(rel => {
-      const last = dayjs(rel.lastInteraction);
-      const now = dayjs();
-      const daysSince = now.diff(last, 'day');
-      const overdue = daysSince > rel.frequencyInDays;
-
-      return {
-        ...rel,
-        daysSinceLast: daysSince,
-        overdue,
-      };
-    }).filter(r => r.overdue) // Solo los que necesitan atención
-      .sort((a, b) => b.priority - a.priority); // Más urgentes primero
+  execute(): SimplifiedSuggestedRelationship[] {
+    
+    return this.priorities
+      .filter(p => p.daysLimit > 0) 
+      .map(p => ({
+        ...p,
+        overdue: true, 
+      }))
+      .sort((a, b) => {
+        const priorityOrder = { red: 3, orange: 2, green: 1 };
+        return (priorityOrder[b.color] || 0) - (priorityOrder[a.color] || 0);
+      });
   }
 }
