@@ -10,8 +10,8 @@ export const useCalendarViewModel = () => {
   useEffect(() => {
     const fetchEvents = async () => {
       try {
-        const useCase = new GetUpcomingEventsUseCase(); // 👈 crear instancia
-        const data = await useCase.execute();           // 👈 usar método .execute()
+        const useCase = new GetUpcomingEventsUseCase(); 
+        const data = await useCase.execute();           
         setEvents(data);
       } catch (err: any) {
         setError(err.message);

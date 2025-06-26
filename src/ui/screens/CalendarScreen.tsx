@@ -1,5 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, Modal, Button } from 'react-native';
+import {
+  View,
+  Text,
+  FlatList,
+  StyleSheet,
+  TouchableOpacity,
+  Modal,
+  Button,
+} from 'react-native';
 import { useScheduledEventStore } from '../../store/scheduleStore';
 import { Calendar } from 'react-native-calendars';
 import { useNavigation } from '@react-navigation/native';
@@ -14,7 +22,7 @@ const CalendarScreen = () => {
   const [showList, setShowList] = useState(false);
 
   const grouped = events.reduce<Record<string, typeof events>>((acc, event) => {
-    const date = event.datetime.split('T')[0];
+    const date = new Date(event.datetime).toLocaleDateString('sv-SE'); // YYYY-MM-DD
     if (!acc[date]) acc[date] = [];
     acc[date].push(event);
     return acc;
@@ -61,7 +69,9 @@ const CalendarScreen = () => {
           <Calendar
             markedDates={{
               ...markedDates,
-              ...(selectedDate && { [selectedDate]: { selected: true, selectedColor: '#3f51b5' } }),
+              ...(selectedDate && {
+                [selectedDate]: { selected: true, selectedColor: '#3f51b5' },
+              }),
             }}
             onDayPress={(day) => {
               setSelectedDate(day.dateString);
@@ -73,12 +83,20 @@ const CalendarScreen = () => {
             <View style={styles.modal}>
               <View style={styles.modalContent}>
                 <Text style={styles.modalTitle}>Eventos para {selectedDate}</Text>
+
                 <FlatList
-                  data={grouped[selectedDate!] || []}
+                  data={
+                    (grouped[selectedDate!]?.slice().sort(
+                      (a, b) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime()
+                    )) || []
+                  }
                   keyExtractor={(item) => item.id}
                   renderItem={renderItem}
-                  ListEmptyComponent={<Text style={styles.noEvents}>Sin eventos para esta fecha.</Text>}
+                  ListEmptyComponent={
+                    <Text style={styles.noEvents}>Sin eventos para esta fecha.</Text>
+                  }
                 />
+
                 <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeButton}>
                   <Text style={styles.buttonText}>Cerrar</Text>
                 </TouchableOpacity>
