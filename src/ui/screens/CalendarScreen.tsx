@@ -18,71 +18,68 @@ import { RootStackParamList } from '../../presentation/navigation/AppNavigator';
 const CalendarScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { events, removeEvent, cleanPastEvents } = useScheduledEventStore();
+
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [showList, setShowList] = useState(false);
 
-  // 🧼 Limpiar eventos pasados al montar la pantalla
   useEffect(() => {
     cleanPastEvents();
   }, []);
 
   const grouped = events.reduce<Record<string, typeof events>>((acc, event) => {
-    const date = new Date(event.datetime).toLocaleDateString('sv-SE'); // YYYY-MM-DD
+    const date = new Date(event.datetime).toLocaleDateString('sv-SE');
     if (!acc[date]) acc[date] = [];
     acc[date].push(event);
     return acc;
   }, {});
 
   const markedDates = Object.keys(grouped).reduce((acc, date) => {
-    acc[date] = { marked: true, dotColor: 'yellow' };
+    acc[date] = { marked: true, dotColor: 'red' };
     return acc;
   }, {} as Record<string, any>);
 
   const handleEventPress = (event: typeof events[0]) => {
-  Alert.alert(
-    'Evento',
-    `${event.contactName}\n${new Date(event.datetime).toLocaleString()}`,
-    [
-      {
-        text: 'Editar',
-        onPress: () => navigation.navigate('ScheduleEvent', { eventId: event.id }),
-      },
-      {
-        text: 'Eliminar',
-        style: 'destructive',
-        onPress: () => {
-          Alert.alert(
-            '¿Eliminar evento?',
-            'Esta acción no se puede deshacer. ¿Estás seguro?',
-            [
-              {
-                text: 'Cancelar',
-                style: 'cancel',
-              },
-              {
-                text: 'Sí, eliminar',
-                style: 'destructive',
-                onPress: () => removeEvent(event.id),
-              },
-            ]
-          );
+    Alert.alert(
+      'Evento',
+      `${event.contactName}\n${new Date(event.datetime).toLocaleString()}`,
+      [
+        {
+          text: 'Editar',
+          onPress: () => navigation.navigate('EditEvent', { eventId: event.id }),
         },
-      },
-      {
-        text: 'Cerrar',
-        style: 'cancel',
-      },
-    ]
-  );
-};
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: () => confirmDeleteEvent(event.id),
+        },
+        { text: 'Cerrar', style: 'cancel' },
+      ]
+    );
+  };
 
+  const confirmDeleteEvent = (eventId: string) => {
+    Alert.alert(
+      '¿Eliminar evento?',
+      'Esta acción no se puede deshacer. ¿Estás seguro?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Sí, eliminar',
+          style: 'destructive',
+          onPress: () => removeEvent(eventId),
+        },
+      ]
+    );
+  };
 
   const renderItem = ({ item }: { item: typeof events[0] }) => (
     <TouchableOpacity onPress={() => handleEventPress(item)}>
       <View style={[styles.eventCard, { borderLeftColor: item.color }]}>
         <Text style={styles.contact}>{item.contactName}</Text>
-        <Text style={styles.datetime}>🕒 {new Date(item.datetime).toLocaleString()}</Text>
+        <Text style={styles.datetime}>
+          🕒 {new Date(item.datetime).toLocaleString()}
+        </Text>
         <Text style={styles.priority}>Prioridad: {item.priority}</Text>
       </View>
     </TouchableOpacity>
@@ -128,13 +125,15 @@ const CalendarScreen = () => {
           <Modal visible={modalVisible} transparent animationType="slide">
             <View style={styles.modal}>
               <View style={styles.modalContent}>
-                <Text style={styles.modalTitle}>Eventos para {selectedDate}</Text>
+                <Text style={styles.modalTitle}>
+                  Eventos para {selectedDate ?? 'fecha no seleccionada'}
+                </Text>
 
                 <FlatList
                   data={
-                    (grouped[selectedDate!]?.slice().sort(
+                    grouped[selectedDate ?? '']?.slice().sort(
                       (a, b) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime()
-                    )) || []
+                    ) || []
                   }
                   keyExtractor={(item) => item.id}
                   renderItem={renderItem}
@@ -143,7 +142,10 @@ const CalendarScreen = () => {
                   }
                 />
 
-                <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeButton}>
+                <TouchableOpacity
+                  onPress={() => setModalVisible(false)}
+                  style={styles.closeButton}
+                >
                   <Text style={styles.buttonText}>Cerrar</Text>
                 </TouchableOpacity>
               </View>

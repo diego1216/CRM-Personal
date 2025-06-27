@@ -1,3 +1,5 @@
+// src/store/scheduleStore.ts
+
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
@@ -12,16 +14,20 @@ export type ScheduledEvent = {
 
 type ScheduleState = {
   events: ScheduledEvent[];
+
+  // Funciones
   addEvent: (event: Omit<ScheduledEvent, 'id'>) => void;
   removeEvent: (id: string) => void;
   updateEvent: (event: ScheduledEvent) => void;
-  cleanPastEvents: () => void; // ✅ nueva función
+  cleanPastEvents: () => void;
 };
 
 export const useScheduledEventStore = create<ScheduleState>()(
   persist(
     (set) => ({
       events: [],
+
+      // Agregar un nuevo evento
       addEvent: (event) => {
         const newEvent: ScheduledEvent = {
           ...event,
@@ -31,11 +37,15 @@ export const useScheduledEventStore = create<ScheduleState>()(
           events: [...state.events, newEvent],
         }));
       },
+
+      // Eliminar evento por ID
       removeEvent: (id) => {
         set((state) => ({
           events: state.events.filter((event) => event.id !== id),
         }));
       },
+
+      // Editar un evento existente
       updateEvent: (updatedEvent) => {
         set((state) => ({
           events: state.events.map((event) =>
@@ -43,15 +53,19 @@ export const useScheduledEventStore = create<ScheduleState>()(
           ),
         }));
       },
+
+      // Eliminar eventos pasados (fecha < ahora)
       cleanPastEvents: () => {
         const now = new Date().getTime();
         set((state) => ({
-          events: state.events.filter((event) =>
-            new Date(event.datetime).getTime() > now
+          events: state.events.filter(
+            (event) => new Date(event.datetime).getTime() > now
           ),
         }));
       },
     }),
-    { name: 'scheduled-events-store' }
+    {
+      name: 'scheduled-events-store',
+    }
   )
 );

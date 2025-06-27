@@ -1,3 +1,4 @@
+// AppNavigator.tsx
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -9,38 +10,30 @@ import ScheduleFromCalendarScreen from '../../ui/screens/ScheduleEventScreen';
 import OverdueNotificationsScreen from '../../ui/screens/OverdueNotificationsScreen';
 import EditEventScreen from '../../ui/screens/EditEventScreen';
 
-
 export type RootStackParamList = {
   Home: undefined;
   Contacts: undefined;
   Calendar: undefined;
   RelationshipDetail: { contactId: string };
-  ScheduleEvent: { eventId?: string }; 
+  ScheduleEvent: undefined; // solo para crear
   OverdueNotifications: undefined;
-  EditEvent: { eventId: string };
+  EditEvent: { eventId: string }; // solo para editar
 };
-
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-const AppNavigator = () => {
-  return (
-    <NavigationContainer>
-      <Stack.Navigator initialRouteName="Home" id={undefined}>
-        <Stack.Screen name="Home" component={HomeScreen} />
-        <Stack.Screen name="Contacts" component={ContactsScreen} />
-        <Stack.Screen name="Calendar" component={CalendarScreen} />
-        <Stack.Screen name="RelationshipDetail" component={RelationshipDetailScreen} />
-        <Stack.Screen name="ScheduleEvent" component={ScheduleFromCalendarScreen} />
-        <Stack.Screen name="OverdueNotifications" component={OverdueNotificationsScreen} options={{ title: 'Notificaciones' }} />
-        <Stack.Screen name="EditEvent" component={EditEventScreen} />
-
-
-
-
-      </Stack.Navigator>
-    </NavigationContainer>
-  );
-};
+const AppNavigator = () => (
+  <NavigationContainer>
+    <Stack.Navigator initialRouteName="Home" id={undefined}>
+      <Stack.Screen name="Home" component={HomeScreen} />
+      <Stack.Screen name="Contacts" component={ContactsScreen} />
+      <Stack.Screen name="Calendar" component={CalendarScreen} />
+      <Stack.Screen name="RelationshipDetail" component={RelationshipDetailScreen} />
+      <Stack.Screen name="ScheduleEvent" component={ScheduleFromCalendarScreen} />
+      <Stack.Screen name="OverdueNotifications" component={OverdueNotificationsScreen} options={{ title: 'Notificaciones' }} />
+      <Stack.Screen name="EditEvent" component={EditEventScreen} />
+    </Stack.Navigator>
+  </NavigationContainer>
+);
 
 export default AppNavigator;
