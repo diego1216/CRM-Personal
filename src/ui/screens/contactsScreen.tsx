@@ -5,10 +5,10 @@ import { View, Text, FlatList, StyleSheet, TouchableOpacity, TextInput, Modal, B
 import { useContactsViewModel } from '../../features/contacts/viewmodel/ContactsViewModel';
 import { useRelationshipStore } from '../../features/relationships/viewmodel/useRelationshipStore';
 
-const priorityColors = [
-  { label: 'Alta', value: 'red' },
-  { label: 'Media', value: 'orange' },
-  { label: 'Baja', value: 'green' },
+const priorityOptions = [
+  { label: 'Alta', value: 'high', color: 'red' },
+  { label: 'Media', value: 'medium', color: 'orange' },
+  { label: 'Baja', value: 'low', color: 'green' },
 ];
 
 const ContactsScreen = () => {
@@ -18,6 +18,7 @@ const ContactsScreen = () => {
   const [selectedContact, setSelectedContact] = useState<any>(null);
   const [daysLimit, setDaysLimit] = useState('');
   const [color, setColor] = useState('red');
+  const [priority, setPriority] = useState<'high' | 'medium' | 'low'>('low');
   const [search, setSearch] = useState('');
 
   const filteredContacts = contacts.filter((c) =>
@@ -28,15 +29,20 @@ const ContactsScreen = () => {
     const existing = getPriorityByContactId(contact.id);
     setSelectedContact(contact);
     setColor(existing?.color || 'red');
+    setPriority(existing?.priority || 'low');
     setDaysLimit(existing?.daysLimit?.toString() || '');
     setModalVisible(true);
   };
 
   const savePriority = () => {
     if (selectedContact) {
+      const selected = priorityOptions.find(p => p.value === priority);
       setPriorityConfig({
+        id: Date.now().toString(),
         contactId: selectedContact.id,
-        color,
+        date: new Date().toISOString(),
+        priority,
+        color: selected?.color || 'red',
         daysLimit: parseInt(daysLimit, 10) || 0,
       });
     }
@@ -96,17 +102,20 @@ const ContactsScreen = () => {
             onChangeText={setDaysLimit}
           />
 
-          <Text style={styles.label}>Color de prioridad:</Text>
+          <Text style={styles.label}>Nivel de prioridad:</Text>
           <View style={styles.colorRow}>
-            {priorityColors.map((p) => (
+            {priorityOptions.map((p) => (
               <TouchableOpacity
                 key={p.value}
                 style={[
                   styles.colorCircle,
-                  { backgroundColor: p.value },
-                  color === p.value && styles.selectedCircle,
+                  { backgroundColor: p.color },
+                  priority === p.value && styles.selectedCircle,
                 ]}
-                onPress={() => setColor(p.value)}
+                onPress={() => {
+                  setPriority(p.value as 'high' | 'medium' | 'low');
+                  setColor(p.color);
+                }}
               />
             ))}
           </View>

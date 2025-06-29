@@ -1,6 +1,8 @@
 export interface ScheduledEvent {
   id: string;
-  contactName: string;
-  date: string; 
-  priorityColor: string; 
+  contactId: string;
+  date: string;
+  priority: 'high' | 'medium' | 'low';
+  color: string;
+  contactName?: string;
 }

@@ -17,7 +17,9 @@
         "READ_CONTACTS",
         "READ_CALENDAR",
         "WRITE_CALENDAR",
-        "NOTIFICATIONS"
+        "NOTIFICATIONS",
+        "READ_CALENDAR", 
+        "WRITE_CALENDAR"
       ],
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {

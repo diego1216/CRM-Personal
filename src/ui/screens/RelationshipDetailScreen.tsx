@@ -1,31 +1,41 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, Alert, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  Alert,
+  TouchableOpacity,
+  StyleSheet,
+} from 'react-native';
 import { useRoute } from '@react-navigation/native';
 import { useRelationshipStore } from '../../features/relationships/viewmodel/useRelationshipStore';
 
-const colors = [
-  { label: 'Alta (Rojo)', value: 'red' },
-  { label: 'Media (Naranja)', value: 'orange' },
-  { label: 'Baja (Verde)', value: 'green' },
-];
-
 const RelationshipDetailScreen = () => {
-  const route = useRoute();
-  const { contactId } = route.params as { contactId: string };
-  const { getPriorityByContactId, setPriorityConfig } = useRelationshipStore();
+  const route = useRoute<any>();
+  const contactId = route.params?.contactId;
+  const { setPriorityConfig, getPriorityByContactId } = useRelationshipStore();
 
-  const rel = getPriorityByContactId(contactId);
-  const [color, setColor] = useState(rel?.color ?? 'red');
-  const [daysLimit, setDaysLimit] = useState(rel?.daysLimit?.toString() ?? '7');
+  const existing = getPriorityByContactId(contactId);
+
+  const [daysLimit, setDaysLimit] = useState(
+    existing?.daysLimit?.toString() || ''
+  );
+  const [color, setColor] = useState(existing?.color || 'green');
+  const [priority, setPriority] = useState<'high' | 'medium' | 'low'>(
+    existing?.priority || 'medium'
+  );
 
   const handleSave = () => {
     if (!daysLimit || isNaN(Number(daysLimit))) {
-      Alert.alert('Por favor ingresa un número válido de días');
+      Alert.alert('Error', 'Por favor ingresa un número válido de días');
       return;
     }
 
     setPriorityConfig({
+      id: Date.now().toString(),
       contactId,
+      date: new Date().toISOString(),
+      priority,
       color,
       daysLimit: parseInt(daysLimit),
     });
@@ -39,28 +49,43 @@ const RelationshipDetailScreen = () => {
 
       <Text style={styles.label}>Días límite para reconectar:</Text>
       <TextInput
+        style={styles.input}
+        keyboardType="numeric"
         value={daysLimit}
         onChangeText={setDaysLimit}
-        keyboardType="numeric"
-        style={styles.input}
+        placeholder="Ej: 30"
       />
 
-      <Text style={styles.label}>Importancia (color):</Text>
-      <View style={styles.colorRow}>
-        {colors.map((c) => (
+      <Text style={styles.label}>Seleccionar prioridad:</Text>
+      <View style={styles.row}>
+        {[
+          { label: 'Alta', value: 'high', color: 'red' },
+          { label: 'Media', value: 'medium', color: 'orange' },
+          { label: 'Baja', value: 'low', color: 'green' },
+        ].map((item) => (
           <TouchableOpacity
-            key={c.value}
+            key={item.value}
             style={[
-              styles.colorCircle,
-              { backgroundColor: c.value },
-              color === c.value && styles.selectedColor,
+              styles.option,
+              {
+                backgroundColor: priority === item.value ? item.color : '#ccc',
+              },
             ]}
-            onPress={() => setColor(c.value)}
-          />
+            onPress={() => {
+              setPriority(item.value as 'high' | 'medium' | 'low');
+              setColor(item.color);
+            }}
+          >
+            <Text style={{ color: priority === item.value ? '#fff' : '#000' }}>
+              {item.label}
+            </Text>
+          </TouchableOpacity>
         ))}
       </View>
 
-      <Button title="Guardar" onPress={handleSave} />
+      <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+        <Text style={{ color: '#fff', fontWeight: 'bold' }}>Guardar</Text>
+      </TouchableOpacity>
     </View>
   );
 };
@@ -68,27 +93,33 @@ const RelationshipDetailScreen = () => {
 export default RelationshipDetailScreen;
 
 const styles = StyleSheet.create({
-  container: { padding: 20, flex: 1 },
-  title: { fontSize: 20, fontWeight: 'bold', marginBottom: 16 },
-  label: { marginTop: 12, fontWeight: '600' },
+  container: { flex: 1, padding: 20 },
+  title: { fontSize: 22, fontWeight: 'bold', marginBottom: 20 },
+  label: { marginTop: 10 },
   input: {
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 6,
-    padding: 8,
-    marginTop: 6,
+    borderColor: '#999',
+    borderRadius: 8,
+    padding: 10,
+    marginTop: 5,
   },
-  colorRow: { flexDirection: 'row', marginTop: 10 },
-  colorCircle: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    marginRight: 10,
-    borderWidth: 1,
-    borderColor: '#aaa',
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginVertical: 15,
   },
-  selectedColor: {
-    borderWidth: 3,
-    borderColor: '#000',
+  option: {
+    flex: 1,
+    marginHorizontal: 5,
+    padding: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  saveButton: {
+    backgroundColor: '#3f51b5',
+    padding: 15,
+    borderRadius: 10,
+    marginTop: 20,
+    alignItems: 'center',
   },
 });

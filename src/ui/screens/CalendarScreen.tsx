@@ -1,48 +1,130 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
-  FlatList,
   StyleSheet,
+  FlatList,
   TouchableOpacity,
   Modal,
-  Button,
   Alert,
+  Button,
+  Platform,
 } from 'react-native';
-import { useScheduledEventStore } from '../../store/scheduleStore';
-import { Calendar } from 'react-native-calendars';
-import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import * as Calendar from 'expo-calendar';
+import * as Notifications from 'expo-notifications';
+import { Calendar as RNCalendar } from 'react-native-calendars';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import type { StackNavigationProp } from '@react-navigation/stack';
+
 import { RootStackParamList } from '../../presentation/navigation/AppNavigator';
 
 const CalendarScreen = () => {
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { events, removeEvent, cleanPastEvents } = useScheduledEventStore();
-
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
+  const [calendarId, setCalendarId] = useState<string | null>(null);
+  const [events, setEvents] = useState<any[]>([]);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
-  const [showList, setShowList] = useState(false);
+
+  const createAppCalendar = async () => {
+    const defaultSource =
+      Platform.OS === 'ios'
+        ? (await Calendar.getDefaultCalendarAsync()).source
+        : {
+            isLocalAccount: true,
+            name: 'Expo Calendar',
+            type: Calendar.SourceType.LOCAL,
+          };
+
+    const id = await Calendar.createCalendarAsync({
+      title: 'Eventos CRM',
+      color: 'blue',
+      entityType: Calendar.EntityTypes.EVENT,
+      source: defaultSource,
+      name: 'CRM Personal',
+      accessLevel: Calendar.CalendarAccessLevel.OWNER,
+      ownerAccount: 'personal',
+    });
+
+    return id;
+  };
+
+  const loadOrCreateCalendar = async () => {
+    const calendars = await Calendar.getCalendarsAsync();
+    const existing = calendars.find(c => c.title === 'Eventos CRM');
+    if (existing) {
+      setCalendarId(existing.id);
+    } else {
+      const newId = await createAppCalendar();
+      setCalendarId(newId);
+    }
+  };
+
+  const loadEvents = async () => {
+    if (!calendarId) return;
+
+    const start = new Date();
+    start.setMonth(start.getMonth() - 1);
+    const end = new Date();
+    end.setMonth(end.getMonth() + 1);
+    const items = await Calendar.getEventsAsync([calendarId], start, end);
+
+    const now = new Date();
+
+    const filteredEvents = await Promise.all(
+      items.map(async (event) => {
+        if (new Date(event.endDate) < now) {
+          try {
+            await Calendar.deleteEventAsync(event.id);
+            await Notifications.scheduleNotificationAsync({
+              content: {
+                title: '🗑 Evento eliminado',
+                body: `El evento "${event.title}" ya ha pasado y fue eliminado.`,
+              },
+              trigger: null,
+            });
+          } catch (error) {
+            console.warn(`Error al eliminar evento ${event.id}:`, error);
+          }
+          return null;
+        }
+        return event;
+      })
+    );
+
+    setEvents(filteredEvents.filter(Boolean));
+  };
+
+  const requestPermissions = async () => {
+    const { status } = await Calendar.requestCalendarPermissionsAsync();
+    if (status === 'granted') {
+      await loadOrCreateCalendar();
+    } else {
+      Alert.alert('Permisos necesarios', 'Habilita acceso al calendario.');
+    }
+  };
 
   useEffect(() => {
-    cleanPastEvents();
+    requestPermissions();
   }, []);
 
-  const grouped = events.reduce<Record<string, typeof events>>((acc, event) => {
-    const date = new Date(event.datetime).toLocaleDateString('sv-SE');
-    if (!acc[date]) acc[date] = [];
-    acc[date].push(event);
-    return acc;
-  }, {});
+  useEffect(() => {
+    if (calendarId) loadEvents();
+  }, [calendarId]);
 
-  const markedDates = Object.keys(grouped).reduce((acc, date) => {
-    acc[date] = { marked: true, dotColor: 'red' };
-    return acc;
-  }, {} as Record<string, any>);
+  useFocusEffect(
+    useCallback(() => {
+      if (calendarId) loadEvents();
+    }, [calendarId])
+  );
 
-  const handleEventPress = (event: typeof events[0]) => {
+  const getLocalDateString = (date: Date) => {
+    return date.toLocaleDateString('sv-SE');
+  };
+
+  const handleEventPress = (event: any) => {
     Alert.alert(
-      'Evento',
-      `${event.contactName}\n${new Date(event.datetime).toLocaleString()}`,
+      event.title,
+      new Date(event.startDate).toLocaleString(),
       [
         {
           text: 'Editar',
@@ -51,108 +133,106 @@ const CalendarScreen = () => {
         {
           text: 'Eliminar',
           style: 'destructive',
-          onPress: () => confirmDeleteEvent(event.id),
+          onPress: () => {
+            Alert.alert(
+              '¿Eliminar evento?',
+              'Esta acción no se puede deshacer. ¿Estás seguro?',
+              [
+                { text: 'Cancelar', style: 'cancel' },
+                {
+                  text: 'Sí, eliminar',
+                  style: 'destructive',
+                  onPress: async () => {
+                    await Calendar.deleteEventAsync(event.id);
+                    loadEvents();
+                  },
+                },
+              ]
+            );
+          },
         },
         { text: 'Cerrar', style: 'cancel' },
       ]
     );
   };
 
-  const confirmDeleteEvent = (eventId: string) => {
-    Alert.alert(
-      '¿Eliminar evento?',
-      'Esta acción no se puede deshacer. ¿Estás seguro?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Sí, eliminar',
-          style: 'destructive',
-          onPress: () => removeEvent(eventId),
-        },
-      ]
-    );
+  const getPriorityColor = (note?: string) => {
+    if (!note) return 'gray';
+    if (note.includes('rojo')) return 'red';
+    if (note.includes('naranja')) return 'orange';
+    return 'green';
   };
 
-  const renderItem = ({ item }: { item: typeof events[0] }) => (
+  const markedDates = events.reduce((acc, event) => {
+    const dateStr = getLocalDateString(new Date(event.startDate));
+    acc[dateStr] = { marked: true, dotColor: 'red' };
+    return acc;
+  }, {} as Record<string, any>);
+
+  const renderItem = ({ item }: { item: any }) => (
     <TouchableOpacity onPress={() => handleEventPress(item)}>
-      <View style={[styles.eventCard, { borderLeftColor: item.color }]}>
-        <Text style={styles.contact}>{item.contactName}</Text>
+      <View
+        style={[
+          styles.eventCard,
+          { borderLeftColor: getPriorityColor(item.notes) },
+        ]}
+      >
+        <Text style={styles.contact}>{item.title}</Text>
         <Text style={styles.datetime}>
-          🕒 {new Date(item.datetime).toLocaleString()}
+          🕒 {new Date(item.startDate).toLocaleString()}
         </Text>
-        <Text style={styles.priority}>Prioridad: {item.priority}</Text>
       </View>
     </TouchableOpacity>
   );
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity onPress={() => setShowList(!showList)} style={styles.button}>
-        <Text style={styles.buttonText}>
-          {showList ? 'Ocultar eventos' : 'Ver eventos agendados 📋'}
-        </Text>
-      </TouchableOpacity>
-
       <Button
-        title="➕ Crear nuevo evento"
-        onPress={() => navigation.navigate('ScheduleEvent')}
-        color="#4CAF50"
+        title="➕ Crear evento"
+        onPress={() => navigation.navigate('CreateEvent')}
       />
 
-      {showList ? (
-        <FlatList
-          data={[...events].sort(
-            (a, b) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime()
-          )}
-          keyExtractor={(item) => item.id}
-          renderItem={renderItem}
-        />
-      ) : (
-        <>
-          <Calendar
-            markedDates={{
-              ...markedDates,
-              ...(selectedDate && {
-                [selectedDate]: { selected: true, selectedColor: '#3f51b5' },
-              }),
-            }}
-            onDayPress={(day) => {
-              setSelectedDate(day.dateString);
-              setModalVisible(true);
-            }}
-          />
+      <RNCalendar
+        markedDates={{
+          ...markedDates,
+          ...(selectedDate && {
+            [selectedDate]: { selected: true, selectedColor: '#3f51b5' },
+          }),
+        }}
+        onDayPress={(day) => {
+          setSelectedDate(day.dateString);
+          setModalVisible(true);
+        }}
+      />
 
-          <Modal visible={modalVisible} transparent animationType="slide">
-            <View style={styles.modal}>
-              <View style={styles.modalContent}>
-                <Text style={styles.modalTitle}>
-                  Eventos para {selectedDate ?? 'fecha no seleccionada'}
+      <Modal visible={modalVisible} transparent animationType="slide">
+        <View style={styles.modal}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>
+              Eventos para {selectedDate}
+            </Text>
+            <FlatList
+              data={events.filter(
+                (e) =>
+                  getLocalDateString(new Date(e.startDate)) === selectedDate
+              )}
+              keyExtractor={(item) => item.id}
+              renderItem={renderItem}
+              ListEmptyComponent={
+                <Text style={styles.noEvents}>
+                  Sin eventos para esta fecha.
                 </Text>
-
-                <FlatList
-                  data={
-                    grouped[selectedDate ?? '']?.slice().sort(
-                      (a, b) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime()
-                    ) || []
-                  }
-                  keyExtractor={(item) => item.id}
-                  renderItem={renderItem}
-                  ListEmptyComponent={
-                    <Text style={styles.noEvents}>Sin eventos para esta fecha.</Text>
-                  }
-                />
-
-                <TouchableOpacity
-                  onPress={() => setModalVisible(false)}
-                  style={styles.closeButton}
-                >
-                  <Text style={styles.buttonText}>Cerrar</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </Modal>
-        </>
-      )}
+              }
+            />
+            <TouchableOpacity
+              onPress={() => setModalVisible(false)}
+              style={styles.closeButton}
+            >
+              <Text style={styles.buttonText}>Cerrar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -161,14 +241,6 @@ export default CalendarScreen;
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16 },
-  button: {
-    backgroundColor: '#3f51b5',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 10,
-    alignItems: 'center',
-  },
-  buttonText: { color: '#fff', fontWeight: 'bold' },
   eventCard: {
     padding: 12,
     marginBottom: 10,
@@ -179,7 +251,6 @@ const styles = StyleSheet.create({
   },
   contact: { fontWeight: 'bold', fontSize: 16 },
   datetime: { color: '#555' },
-  priority: { color: '#888' },
   modal: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.6)',
@@ -190,7 +261,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     padding: 16,
     borderRadius: 12,
-    maxHeight: '80%',
+    maxHeight: '85%',
   },
   modalTitle: {
     fontSize: 18,
@@ -204,5 +275,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
   },
+  buttonText: { color: '#fff', fontWeight: 'bold' },
   noEvents: { textAlign: 'center', color: '#888', marginTop: 10 },
 });

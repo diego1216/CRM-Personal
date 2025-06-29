@@ -8,6 +8,16 @@ import { getFCMToken } from './src/data/notification/notifications';
 import { checkAndNotifyOverdueContacts } from './src/domain/usecases/checkAndNotifyOverdueContacts';
 import { registerBackgroundTask } from './src/services/backgroundTask';
 
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: false,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
+
 export default function App() {
   const [expoPushToken, setExpoPushToken] = useState<string | null>(null);
   const [notification, setNotification] = useState<Notifications.Notification | null>(null);
@@ -32,10 +42,10 @@ export default function App() {
           });
         }
 
-        const token = await getFCMToken();
-        if (token) {
-          if (__DEV__) console.log('Expo Push Token:', token); // Solo visible en consola de desarrollo
-          setExpoPushToken(token);
+        const fcmToken = await getFCMToken();
+        if (fcmToken) {
+          if (__DEV__) console.log('Expo Push Token:', fcmToken);
+          setExpoPushToken(fcmToken);
         }
 
         checkAndNotifyOverdueContacts();

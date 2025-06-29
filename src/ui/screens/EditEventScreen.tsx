@@ -1,5 +1,3 @@
-// src/ui/screens/EditEventScreen.tsx
-
 import React, { useEffect, useState } from 'react';
 import {
   View,
@@ -13,7 +11,7 @@ import {
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
 import { useContactsViewModel } from '../../features/contacts/viewmodel/ContactsViewModel';
-import { useScheduledEventStore } from '../../store/scheduleStore';
+import * as Calendar from 'expo-calendar';
 import { RouteProp, useRoute, useNavigation } from '@react-navigation/native';
 import { RootStackParamList } from '../../presentation/navigation/AppNavigator';
 
@@ -29,82 +27,75 @@ const EditEventScreen = () => {
   const route = useRoute<EditEventRouteProp>();
   const navigation = useNavigation();
   const { contacts } = useContactsViewModel();
-  const { events, updateEvent } = useScheduledEventStore();
 
-  const [selectedContactId, setSelectedContactId] = useState('');
+  const [event, setEvent] = useState<Calendar.Event | null>(null);
+  const [calendarId, setCalendarId] = useState<string | null>(null);
+  const [selectedContactId, setSelectedContactId] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [tempDate, setTempDate] = useState<Date>(new Date());
+  const [selectedTime, setSelectedTime] = useState(new Date());
   const [importanceColor, setImportanceColor] = useState('red');
-  const [showPicker, setShowPicker] = useState(false);
-  const [mode, setMode] = useState<'date' | 'time'>('date');
-
-  const event = events.find((e) => e.id === route.params?.eventId);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
 
   useEffect(() => {
-    if (event) {
-      setSelectedContactId(event.contactId);
-      const parsedDate = new Date(event.datetime);
-      setSelectedDate(parsedDate);
-      setTempDate(parsedDate);
-      setImportanceColor(event.color);
-    }
-  }, [event]);
-
-  const onChange = (eventPicker: any, date?: Date) => {
-    if (Platform.OS === 'android') {
-      if (eventPicker.type === 'dismissed') {
-        setShowPicker(false);
-        setMode('date');
+    (async () => {
+      const { status } = await Calendar.requestCalendarPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permiso denegado para acceder al calendario');
         return;
       }
 
-      if (mode === 'date' && date) {
-        setTempDate(date);
-        setMode('time');
-        setShowPicker(true); // reabrir picker para hora
-      } else if (mode === 'time' && date) {
-        const finalDate = new Date(
-          tempDate.getFullYear(),
-          tempDate.getMonth(),
-          tempDate.getDate(),
-          date.getHours(),
-          date.getMinutes()
-        );
-        setSelectedDate(finalDate);
-        setShowPicker(false);
-        setMode('date');
+      const calendars = await Calendar.getCalendarsAsync();
+      const local = calendars.find(cal => cal.source?.name === 'Default' || cal.title === 'Eventos CRM');
+      if (local) setCalendarId(local.id);
+
+      const fetchedEvent = await Calendar.getEventAsync(route.params.eventId);
+      if (fetchedEvent) {
+        setEvent(fetchedEvent);
+        setSelectedDate(new Date(fetchedEvent.startDate));
+        setSelectedTime(new Date(fetchedEvent.startDate));
+        const color = (fetchedEvent.notes || '').includes('rojo')
+          ? 'red'
+          : (fetchedEvent.notes || '').includes('naranja')
+          ? 'orange'
+          : 'green';
+        setImportanceColor(color);
       }
-    } else {
-      setSelectedDate(date || selectedDate);
-      setShowPicker(false);
-    }
+    })();
+  }, []);
+
+  const handleDateChange = (_: any, date?: Date) => {
+    if (date) setSelectedDate(date);
+    setShowDatePicker(false);
   };
 
-  const openDateTimePicker = () => {
-    if (Platform.OS === 'android') {
-      setMode('date');
-    }
-    setShowPicker(true);
+  const handleTimeChange = (_: any, time?: Date) => {
+    if (time) setSelectedTime(time);
+    setShowTimePicker(false);
   };
 
-  const handleSave = () => {
-    if (!selectedContactId) {
-      Alert.alert('⚠️ Selecciona un contacto');
-      return;
-    }
+  const handleSave = async () => {
+    if (!event || !calendarId) return;
 
-    const contactName = contacts.find((c) => c.id === selectedContactId)?.name || '';
+    const contactName =
+      contacts.find((c) => c.id === selectedContactId)?.name || event.title.replace('Reunión con ', '');
 
-    updateEvent({
-      id: event!.id,
-      contactId: selectedContactId,
-      contactName,
-      datetime: selectedDate.toISOString(),
-      priority: 1,
-      color: importanceColor,
+    const combinedStart = new Date(
+      selectedDate.getFullYear(),
+      selectedDate.getMonth(),
+      selectedDate.getDate(),
+      selectedTime.getHours(),
+      selectedTime.getMinutes()
+    );
+
+    await Calendar.updateEventAsync(event.id, {
+      title: `Reunión con ${contactName}`,
+      startDate: combinedStart,
+      endDate: new Date(combinedStart.getTime() + 60 * 60 * 1000),
+      notes: `Importancia: ${importanceColor}`,
     });
 
-    Alert.alert('✅ Evento actualizado correctamente');
+    Alert.alert('✅ Evento actualizado en el calendario del sistema');
     navigation.goBack();
   };
 
@@ -125,45 +116,57 @@ const EditEventScreen = () => {
         <Picker
           selectedValue={selectedContactId}
           onValueChange={(value) => setSelectedContactId(value)}
-          dropdownIconColor="#000"
-          style={{ color: '#000' }} // ítem seleccionado (fuera del menú)
-          mode="dropdown"
+          style={{ color: 'black' }}
+          dropdownIconColor="black"
         >
-          <Picker.Item label="Seleccionar..." value="" />
+          <Picker.Item label="Selecciona el contacto" value={''} />
           {contacts.map((contact) => (
-            <Picker.Item key={contact.id} label={contact.name} value={contact.id} 
-              color='#fff'
+            <Picker.Item
+              key={contact.id}
+              label={contact.name}
+              value={contact.id}
+              color="black"
             />
           ))}
         </Picker>
       </View>
 
-      <Text style={styles.label}>Fecha y hora:</Text>
-      <TouchableOpacity onPress={openDateTimePicker} style={styles.dateButton}>
-        <Text>{selectedDate.toLocaleString()}</Text>
-      </TouchableOpacity>
-
-      {showPicker && (
+      <Button title="Seleccionar fecha" onPress={() => setShowDatePicker(true)} />
+      {showDatePicker && (
         <DateTimePicker
           value={selectedDate}
-          mode={mode}
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={onChange}
+          mode="date"
+          display="default"
+          onChange={handleDateChange}
         />
       )}
 
-      <Text style={styles.label}>Importancia (color):</Text>
-      <View style={styles.colorRow}>
+      <Button title="Seleccionar hora" onPress={() => setShowTimePicker(true)} />
+      {showTimePicker && (
+        <DateTimePicker
+          value={selectedTime}
+          mode="time"
+          display="default"
+          onChange={handleTimeChange}
+        />
+      )}
+
+      <Text style={{ marginTop: 20 }}>Seleccionar prioridad:</Text>
+      <View style={{ flexDirection: 'row', gap: 10, marginVertical: 10 }}>
         {colors.map((c) => (
           <TouchableOpacity
             key={c.value}
-            style={[
-              styles.colorCircle,
-              { backgroundColor: c.value },
-              importanceColor === c.value && styles.selectedColor,
-            ]}
+            style={{
+              padding: 10,
+              borderRadius: 10,
+              backgroundColor: importanceColor === c.value ? c.value : '#eee',
+              flex: 1,
+              alignItems: 'center',
+            }}
             onPress={() => setImportanceColor(c.value)}
-          />
+          >
+            <Text style={{ color: importanceColor === c.value ? '#fff' : '#000' }}>{c.label}</Text>
+          </TouchableOpacity>
         ))}
       </View>
 

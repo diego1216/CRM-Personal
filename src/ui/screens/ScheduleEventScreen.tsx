@@ -1,9 +1,17 @@
-import React, { useState } from 'react';
-import { View, Text, Button, StyleSheet, Alert, TouchableOpacity, Platform } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  Button,
+  StyleSheet,
+  Alert,
+  TouchableOpacity,
+  Platform,
+} from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { useScheduledEventStore } from '../../store/scheduleStore';
 import { useContactsViewModel } from '../../features/contacts/viewmodel/ContactsViewModel';
 import { Picker } from '@react-native-picker/picker';
+import * as Calendar from 'expo-calendar';
 import { useNavigation } from '@react-navigation/native';
 
 const colors = [
@@ -12,35 +20,79 @@ const colors = [
   { label: 'Baja (Verde)', value: 'green' },
 ];
 
-const ScheduleFromCalendarScreen = () => {
-   const navigation = useNavigation();
+const ScheduleEventScreen = () => {
+  const navigation = useNavigation();
   const { contacts } = useContactsViewModel();
-  const addEvent = useScheduledEventStore((state) => state.addEvent);
 
   const [selectedContactId, setSelectedContactId] = useState('');
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [mode, setMode] = useState<'date' | 'time' | 'datetime'>(Platform.OS === 'android' ? 'date' : 'datetime');
-  const [showPicker, setShowPicker] = useState(false);
   const [importanceColor, setImportanceColor] = useState('red');
+  const [showPicker, setShowPicker] = useState(false);
+  const [calendarId, setCalendarId] = useState<string | null>(null);
 
-  const handleSave = () => {
+  useEffect(() => {
+    (async () => {
+      const { status } = await Calendar.requestCalendarPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permiso denegado para acceder al calendario');
+        return;
+      }
+
+      const calendars = await Calendar.getCalendarsAsync();
+      const local = calendars.find(cal => cal.source?.name === 'Default');
+      if (local) {
+        setCalendarId(local.id);
+      } else {
+        const defaultCalendarSource =
+          Platform.OS === 'ios'
+            ? (await Calendar.getDefaultCalendarAsync()).source
+            : {
+                isLocalAccount: true,
+                name: 'Expo Calendar',
+                type: 'local',
+              };
+
+
+
+        const newCalendarId = await Calendar.createCalendarAsync({
+          title: 'CRM Personal',
+          color: '#3f51b5',
+          entityType: Calendar.EntityTypes.EVENT,
+          source: defaultCalendarSource,
+          name: 'CRM Personal',
+          ownerAccount: 'personal',
+          accessLevel: Calendar.CalendarAccessLevel.OWNER,
+        });
+
+        setCalendarId(newCalendarId);
+      }
+    })();
+  }, []);
+
+  const handleSave = async () => {
     if (!selectedContactId) {
       Alert.alert('⚠️ Selecciona un contacto');
       return;
     }
 
-    const contactName = contacts.find((c) => c.id === selectedContactId)?.name || '';
+    const contactName =
+      contacts.find((c) => c.id === selectedContactId)?.name || '';
 
-    addEvent({
-      contactId: selectedContactId,
-      contactName,
-      datetime: selectedDate.toISOString(),
-      priority: 1,
-      color: importanceColor,
+    if (!calendarId) {
+      Alert.alert('Error: No se pudo acceder al calendario.');
+      return;
+    }
+
+    await Calendar.createEventAsync(calendarId, {
+      title: `Reunión con ${contactName}`,
+      startDate: selectedDate,
+      endDate: new Date(selectedDate.getTime() + 60 * 60 * 1000), // +1h
+      timeZone: 'America/Mexico_City',
+      notes: `Importancia: ${importanceColor}`,
     });
 
-    Alert.alert('✅ Evento creado');
-    navigation.goBack(); // Redirigir al calendario
+    Alert.alert('✅ Evento creado en el calendario del sistema');
+    navigation.goBack();
   };
 
   return (
@@ -50,85 +102,44 @@ const ScheduleFromCalendarScreen = () => {
       <Text style={styles.label}>Contacto</Text>
       <View style={styles.pickerWrapper}>
         <Picker
-    selectedValue={selectedContactId}
-    onValueChange={(value) => setSelectedContactId(value)}
-    dropdownIconColor="#000"
-    style={{ color: '#000' }} // ítem seleccionado (fuera del menú)
-    mode="dropdown"
-  >
-    <Picker.Item label="Seleccionar..." value="" color="#999" />
-    {contacts.map((contact) => (
-      <Picker.Item
-        key={contact.id}
-        label={contact.name}
-        value={contact.id}
-        color="#fff" // ítems dentro del menú desplegable
-      />
-  ))}
-</Picker>
+          selectedValue={selectedContactId}
+          onValueChange={(value) => setSelectedContactId(value)}
+        >
+          <Picker.Item label="Seleccionar..." value="" />
+          {contacts.map((contact) => (
+            <Picker.Item key={contact.id} label={contact.name} value={contact.id} />
+          ))}
+        </Picker>
       </View>
 
       <Text style={styles.label}>Fecha y hora</Text>
-      <TouchableOpacity 
-        onPress={() => {
-          if (Platform.OS === 'android') {
-            setMode('date');
-          } else {
-            setMode('datetime');
-          }
-          setShowPicker(true);
-        }} 
-        style={styles.dateButton}
-      >
-        <Text>
-          {selectedDate.toLocaleDateString()} – {selectedDate.toLocaleTimeString()}
-        </Text>
+      <TouchableOpacity onPress={() => setShowPicker(true)} style={styles.dateButton}>
+        <Text>{selectedDate.toLocaleString()}</Text>
       </TouchableOpacity>
 
       {showPicker && (
         <DateTimePicker
           value={selectedDate}
-          mode={Platform.OS === 'android' ? mode : 'datetime'}
+          mode="datetime"
           display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={(event: any, date?: Date) => {
-            if (Platform.OS === 'android') {
-              if (mode === 'date') {
-                if (event?.type === 'set' && date) {
-                  setSelectedDate(date);
-                  setMode('time');
-                } else {
-                  // Si se canceló en la selección de fecha
-                  setShowPicker(false);
-                }
-              } else if (mode === 'time') {
-                if (event?.type === 'set' && date) {
-                  setSelectedDate(date);
-                }
-                // Cerrar picker tras seleccionar hora o cancelar
-                setShowPicker(false);
-                setMode('date');
-              }
-            } else {
-              if (event?.type === 'set' && date) {
-                setSelectedDate(date);
-              }
-              setShowPicker(false);
-            }
+          onChange={(event, date) => {
+            setShowPicker(false);
+            if (date) setSelectedDate(date);
           }}
         />
       )}
 
       <Text style={styles.label}>Prioridad</Text>
       <View style={styles.colorRow}>
-        {colors.map((colorOption) => (
+        {colors.map((c) => (
           <TouchableOpacity
-            key={colorOption.value}
+            key={c.value}
             style={[
               styles.colorCircle,
-              importanceColor === colorOption.value && styles.colorCircleSelected,
-              { backgroundColor: colorOption.value },
+              { backgroundColor: c.value },
+              importanceColor === c.value && styles.colorSelected,
             ]}
-            onPress={() => setImportanceColor(colorOption.value)}
+            onPress={() => setImportanceColor(c.value)}
           />
         ))}
       </View>
@@ -138,7 +149,7 @@ const ScheduleFromCalendarScreen = () => {
   );
 };
 
-export default ScheduleFromCalendarScreen;
+export default ScheduleEventScreen;
 
 const styles = StyleSheet.create({
   container: { padding: 20, flex: 1 },
@@ -148,7 +159,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ccc',
     borderRadius: 6,
-    width: '100%',
     overflow: 'hidden',
     marginVertical: 8,
   },
@@ -160,12 +170,14 @@ const styles = StyleSheet.create({
   },
   colorRow: { flexDirection: 'row', marginTop: 10 },
   colorCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     marginRight: 10,
+    borderWidth: 1,
+    borderColor: '#aaa',
   },
-  colorCircleSelected: {
+  colorSelected: {
     borderWidth: 3,
     borderColor: '#000',
   },

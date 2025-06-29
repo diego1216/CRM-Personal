@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { ScheduledEvent } from '../domain/entities/ScheduledEvent';
-import { v4 as uuidv4 } from 'uuid';
+import uuid from 'react-native-uuid';
 
 interface ScheduledEventState {
   events: ScheduledEvent[];
@@ -14,7 +14,7 @@ export const useScheduledEventStore = create<ScheduledEventState>()(
       events: [],
       addEvent: (event) =>
         set((state) => ({
-          events: [...state.events, { ...event, id: uuidv4() }],
+          events: [...state.events, { ...event, id: uuid.v4().toString() }],
         })),
     }),
     {

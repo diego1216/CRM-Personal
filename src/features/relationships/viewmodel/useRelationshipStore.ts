@@ -2,7 +2,10 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 export interface RelationshipPriority {
+  id: string;
   contactId: string;
+  date: string;
+  priority: 'high' | 'medium' | 'low';
   color: string;
   daysLimit: number;
 }

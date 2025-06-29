@@ -24,13 +24,19 @@ export const checkAndNotifyOverdueContacts = () => {
     const daysSince = lastDate ? differenceInDays(new Date(), lastDate) : Infinity;
 
     if (daysSince >= priority.daysLimit) {
-      Notifications.scheduleNotificationAsync({
-        content: {
-          title: `📞 Recuérdalo`,
-          body: `Debes contactar a ${contact.name}, han pasado más de ${priority.daysLimit} días.`,
-        },
-        trigger: null,
-      });
+     Notifications.scheduleNotificationAsync({
+  content: {
+    title: '📞 Recuérdalo',
+    body: `Debes contactar a ${contact.name}, han pasado más de ${priority.daysLimit} días.`,
+    sound: true,
+  },
+  trigger: {
+    type: 'timeInterval',
+    seconds: 15,
+    repeats: false,
+  } as Notifications.TimeIntervalTriggerInput,
+});
+
     }
   });
 };
