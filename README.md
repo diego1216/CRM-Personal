@@ -58,7 +58,7 @@ src/
 
 ### 1. Clonar el repositorio
 aabrir bash
-git clone https://github.com/tuusuario/crmpersonal.git
+git clone https://github.com/diego1216/crmpersonal.git
 cd crmpersonal
 2. Instalar dependencias
 npm install
