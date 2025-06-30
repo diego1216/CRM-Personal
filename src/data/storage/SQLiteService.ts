@@ -1,35 +1,35 @@
-
+// Importa la función para abrir una base de datos SQLite de forma sincrónica desde Expo
 import { openDatabaseSync } from 'expo-sqlite';
 
-// Abrir conexión sincronizada
+// Abre una conexión a la base de datos local llamada 'crm.db'
 const db = openDatabaseSync('crm.db');
 
+// Tipos para definir prioridad y color que se usarán en eventos y configuración de contactos
+export type PriorityLevel = 'Alta' | 'Media' | 'Baja';         // Nivel de prioridad permitidos
+export type PriorityColor = 'red' | 'orange' | 'green';        // Colores válidos para cada prioridad
 
-//Tipos 
-
-export type PriorityLevel = 'Alta' | 'Media' | 'Baja';
-export type PriorityColor = 'red' | 'orange' | 'green';
-
+// Interfaz que representa un evento programado
 export interface ScheduledEvent {
-  id: string;
-  title: string;
-  datetime: string;
-  contactId: string;
-  priority: PriorityLevel;
-  color: PriorityColor;
+  id: string;              // Identificador único del evento
+  title: string;           // Título o descripción del evento
+  datetime: string;        // Fecha y hora del evento en formato string
+  contactId: string;       // ID del contacto asociado al evento
+  priority: PriorityLevel; // Prioridad del evento ('Alta', 'Media', 'Baja')
+  color: PriorityColor;    // Color asignado según prioridad ('red', 'orange', 'green')
 }
 
+// Interfaz para la configuración de prioridad asociada a un contacto específico
 export interface ContactPriority {
-  contactId: string;
-  priority: PriorityLevel;
-  color: PriorityColor;
-  daysLimit: number;
+  contactId: string;       // ID del contacto
+  priority: PriorityLevel; // Nivel de prioridad asignado
+  color: PriorityColor;    // Color asignado a esa prioridad
+  daysLimit: number;       // Límite de días para volver a contactar
 }
 
-// Inicialización de Tablas 
-
+// Función que inicializa las tablas en la base de datos SQLite
 export const initDatabase = async () => {
   try {
+    // Crea la tabla 'events' si no existe (para guardar eventos programados)
     await db.execAsync(`
       CREATE TABLE IF NOT EXISTS events (
         id TEXT PRIMARY KEY NOT NULL,
@@ -41,6 +41,7 @@ export const initDatabase = async () => {
       );
     `);
 
+    // Crea la tabla 'contact_settings' si no existe (para configuración de contactos)
     await db.execAsync(`
       CREATE TABLE IF NOT EXISTS contact_settings (
         contactId TEXT PRIMARY KEY,
@@ -50,15 +51,18 @@ export const initDatabase = async () => {
       );
     `);
 
+    // Muestra mensaje de éxito en consola
     console.log('✅ Tablas SQLite listas');
   } catch (error) {
+    // Captura errores en la creación de tablas
     console.error('❌ Error al crear tablas:', error);
     throw error;
   }
 };
 
-//  Eventos 
+// -------------------- Gestión de Eventos --------------------
 
+// Inserta o reemplaza un evento en la tabla 'events'
 export const insertEvent = async (event: ScheduledEvent) => {
   try {
     await db.runAsync(
@@ -72,6 +76,7 @@ export const insertEvent = async (event: ScheduledEvent) => {
   }
 };
 
+// Obtiene todos los eventos ordenados por fecha y hora
 export const getEvents = async (): Promise<ScheduledEvent[]> => {
   try {
     const result = await db.getAllAsync<ScheduledEvent>(`
@@ -80,10 +85,11 @@ export const getEvents = async (): Promise<ScheduledEvent[]> => {
     return result;
   } catch (error) {
     console.error('❌ Error al obtener eventos:', error);
-    return [];
+    return []; // Devuelve lista vacía en caso de error
   }
 };
 
+// Elimina un evento de la base de datos por su ID
 export const deleteEvent = async (id: string) => {
   try {
     await db.runAsync(`DELETE FROM events WHERE id = ?;`, [id]);
@@ -93,8 +99,9 @@ export const deleteEvent = async (id: string) => {
   }
 };
 
-//  Configuración de Contactos 
+// -------------------- Configuración de Contactos --------------------
 
+// Guarda o actualiza la configuración de un contacto (prioridad, color y límite de días)
 export const saveContactSettings = async (
   contactId: string,
   priority: PriorityLevel,
@@ -113,9 +120,12 @@ export const saveContactSettings = async (
   }
 };
 
+// Obtiene todas las configuraciones de contactos guardadas en la tabla 'contact_settings'
 export const getAllContactSettings = async (): Promise<ContactPriority[]> => {
   try {
     const rows = await db.getAllAsync<any>(`SELECT * FROM contact_settings;`);
+    
+    // Normaliza los valores para asegurar que tengan el tipo correcto
     return rows.map((row) => ({
       contactId: row.contactId,
       priority: normalizePriority(row.priority),
@@ -128,13 +138,15 @@ export const getAllContactSettings = async (): Promise<ContactPriority[]> => {
   }
 };
 
-// -------------------- Helpers --------------------
+// -------------------- Funciones Auxiliares --------------------
 
+// Asegura que el valor de prioridad sea uno de los permitidos, si no, retorna 'Media'
 const normalizePriority = (value: string): PriorityLevel => {
   if (value === 'Alta' || value === 'Media' || value === 'Baja') return value;
   return 'Media';
 };
 
+// Asegura que el color sea uno de los permitidos, si no, retorna 'green'
 const normalizeColor = (value: string): PriorityColor => {
   if (value === 'red' || value === 'orange' || value === 'green') return value;
   return 'green';

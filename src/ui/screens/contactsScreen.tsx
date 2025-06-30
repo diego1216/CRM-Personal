@@ -1,24 +1,40 @@
+// Importación de React y hooks necesarios
 import React, { useState } from 'react';
+
+// Importación de componentes de React Native
 import {
   View, Text, FlatList, StyleSheet,
   TouchableOpacity, TextInput, Modal, Button, ActivityIndicator,
 } from 'react-native';
+
+// Importa el ViewModel para obtener y gestionar los contactos
 import { useContactsViewModel } from '../../features/contacts/viewmodel/ContactsViewModel';
+
+// Importa el store para leer/guardar prioridades de contacto
 import { useRelationshipStore } from '../../features/relationships/viewmodel/useRelationshipStore';
+
+// Tipos para colores y niveles de prioridad
 import { PriorityColor, PriorityLevel } from '../../data/storage/SQLiteService';
 
+// Definición de las opciones de prioridad visualizadas en el modal
 const priorityOptions = [
   { label: 'Alta', value: 'high', color: 'red' },
   { label: 'Media', value: 'medium', color: 'orange' },
   { label: 'Baja', value: 'low', color: 'green' },
 ] as const;
 
+// Tipo que representa los valores posibles de prioridad
 type PriorityValue = typeof priorityOptions[number]['value'];
 
+// Componente principal de la pantalla de contactos
 const ContactsScreen = () => {
+  // Obtiene contactos, estado de carga y errores desde el ViewModel
   const { contacts, loading, error } = useContactsViewModel();
+
+  // Obtiene funciones del store de relaciones
   const { setPriority, getPriorityByContactId } = useRelationshipStore();
 
+  // Estados para modal, contacto seleccionado, límite de días, prioridad, etc.
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedContact, setSelectedContact] = useState<any>(null);
   const [daysLimit, setDaysLimit] = useState('');
@@ -26,15 +42,19 @@ const ContactsScreen = () => {
   const [selectedPriorityValue, setSelectedPriorityValue] = useState<PriorityValue>('low');
   const [search, setSearch] = useState('');
 
+  // Filtro de contactos por texto ingresado
   const filteredContacts = contacts.filter((c) =>
     c.name.toLowerCase().includes(search.toLowerCase())
   );
 
+  // Abre el modal para editar la prioridad de un contacto
   const openModal = (contact: any) => {
-    const existing = getPriorityByContactId(contact.id);
+    const existing = getPriorityByContactId(contact.id); // Busca si ya tiene una prioridad
+
     setSelectedContact(contact);
     setColor((existing?.color || 'red') as PriorityColor);
 
+    // Mapa para convertir nivel textual a valor
     const priorityMap: Record<PriorityLevel, PriorityValue> = {
       Alta: 'high',
       Media: 'medium',
@@ -46,6 +66,7 @@ const ContactsScreen = () => {
     setModalVisible(true);
   };
 
+  // Guarda los datos configurados en el modal
   const savePriority = () => {
     if (selectedContact) {
       const selected = priorityOptions.find(p => p.value === selectedPriorityValue);
@@ -56,25 +77,31 @@ const ContactsScreen = () => {
         daysLimit: parseInt(daysLimit, 10) || 0,
       });
     }
-    setModalVisible(false);
+    setModalVisible(false); // Cierra modal
   };
 
+  // Renderiza un contacto en la lista
   const renderItem = ({ item }: any) => {
-    const priority = getPriorityByContactId(item.id);
+    const priority = getPriorityByContactId(item.id); // Revisa si tiene configuración guardada
 
     return (
       <TouchableOpacity style={styles.item} onPress={() => openModal(item)}>
         <View style={styles.row}>
+          {/* Indicador de color de prioridad */}
           {priority?.color && (
             <View style={[styles.colorIndicator, { backgroundColor: priority.color }]} />
           )}
           <View style={{ flex: 1 }}>
             <Text style={styles.name}>{item.name}</Text>
+            {/* Muestra el primer número de teléfono disponible */}
             {item.phoneNumbers?.[0]?.number && (
               <Text style={styles.info}>{item.phoneNumbers[0].number}</Text>
             )}
+            {/* Muestra cada cuántos días contactar si tiene prioridad */}
             {priority && (
-              <Text style={styles.days}>🔔 Cada {priority.daysLimit} días</Text>
+              <Text style={styles.days}>
+              🔔 Cada {priority.daysLimit} días
+              </Text>
             )}
           </View>
         </View>
@@ -82,26 +109,30 @@ const ContactsScreen = () => {
     );
   };
 
+  // Muestra spinner mientras carga
   if (loading) return <ActivityIndicator size="large" style={styles.centered} />;
   if (error) return <Text style={styles.errorText}>Error: {error}</Text>;
 
+  // Renderizado principal
   return (
     <View style={styles.container}>
+      {/* Input de búsqueda */}
       <TextInput
-  placeholder="Buscar contacto..."
-  placeholderTextColor="black"
-  value={search}
-  onChangeText={setSearch}
-  style={[styles.searchInput, { color: 'black' }]}
-/>
+        placeholder="Buscar contacto..."
+        placeholderTextColor="black"
+        value={search}
+        onChangeText={setSearch}
+        style={[styles.searchInput, { color: 'black' }]}
+      />
 
-
+      {/* Lista de contactos filtrados */}
       <FlatList
         data={filteredContacts}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
       />
 
+      {/* Modal para editar prioridad */}
       <Modal visible={modalVisible} animationType="slide">
         <View style={styles.modalContent}>
           <Text style={styles.modalTitle}>Configurar Prioridad</Text>
@@ -131,13 +162,13 @@ const ContactsScreen = () => {
               />
             ))}
           </View>
-          <View style={styles.cancelButtonWrapper}>
-  <Button 
-    title="Guardar" 
-    onPress={savePriority} 
-  />
-</View>
 
+          {/* Botón para guardar configuración */}
+          <View style={styles.cancelButtonWrapper}>
+            <Button title="Guardar" onPress={savePriority} />
+          </View>
+
+          {/* Botón para cerrar sin guardar */}
           <View style={styles.cancelButtonWrapper}>
             <Button
               title="CANCELAR"
@@ -153,6 +184,7 @@ const ContactsScreen = () => {
 
 export default ContactsScreen;
 
+// Estilos visuales del componente
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
@@ -182,10 +214,9 @@ const styles = StyleSheet.create({
     borderColor: '#aaa',
     borderWidth: 1,
   },
-
   cancelButtonWrapper: {
-  marginVertical: 8,
-},
+    marginVertical: 8,
+  },
   name: {
     fontWeight: 'bold',
     fontSize: 16,

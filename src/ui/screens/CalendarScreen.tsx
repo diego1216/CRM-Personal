@@ -1,3 +1,4 @@
+// Importación de hooks y componentes necesarios de React
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
@@ -10,25 +11,36 @@ import {
   Button,
   Platform,
 } from 'react-native';
+
+// Importación de APIs de Expo Calendar y Notifications
 import * as Calendar from 'expo-calendar';
 import * as Notifications from 'expo-notifications';
+
+// Importación del componente calendario visual
 import { Calendar as RNCalendar } from 'react-native-calendars';
+
+// Importación de navegación y tipos asociados
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import { useScheduledEventStore } from '../../store/scheduleStore';
 import { RootStackParamList } from '../../presentation/navigation/AppNavigator';
 
+// Componente principal de la pantalla de calendario
 const CalendarScreen = () => {
+  // Hook de navegación
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
-  const [calendarId, setCalendarId] = useState<string | null>(null);
-  const [events, setEvents] = useState<any[]>([]);
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [modalVisible, setModalVisible] = useState(false);
 
+  // Estados locales
+  const [calendarId, setCalendarId] = useState<string | null>(null); // ID del calendario creado o existente
+  const [events, setEvents] = useState<any[]>([]); // Eventos del calendario
+  const [selectedDate, setSelectedDate] = useState<string | null>(null); // Fecha seleccionada
+  const [modalVisible, setModalVisible] = useState(false); // Estado del modal
+
+  // Crea un nuevo calendario si no existe (usado sólo si es necesario)
   const createAppCalendar = async () => {
     const defaultSource =
       Platform.OS === 'ios'
-        ? (await Calendar.getDefaultCalendarAsync()).source
+        ? (await Calendar.getDefaultCalendarAsync()).source // En iOS usa el calendario por defecto
         : {
             isLocalAccount: true,
             name: 'Expo Calendar',
@@ -48,6 +60,7 @@ const CalendarScreen = () => {
     return id;
   };
 
+  // Carga un calendario existente o crea uno nuevo si no existe
   const loadOrCreateCalendar = async () => {
     const calendars = await Calendar.getCalendarsAsync();
     const existing = calendars.find(c => c.title === 'Eventos CRM');
@@ -59,13 +72,15 @@ const CalendarScreen = () => {
     }
   };
 
+  // Carga los eventos del calendario y elimina los eventos pasados
   const loadEvents = async () => {
     if (!calendarId) return;
 
     const start = new Date();
-    start.setMonth(start.getMonth() - 1);
+    start.setMonth(start.getMonth() - 1); // Inicio un mes atrás
     const end = new Date();
-    end.setMonth(end.getMonth() + 1);
+    end.setMonth(end.getMonth() + 1); // Fin un mes adelante
+
     const items = await Calendar.getEventsAsync([calendarId], start, end);
 
     const now = new Date();
@@ -74,7 +89,7 @@ const CalendarScreen = () => {
       items.map(async (event) => {
         if (new Date(event.endDate) < now) {
           try {
-            await Calendar.deleteEventAsync(event.id);
+            await Calendar.deleteEventAsync(event.id); // Borra eventos pasados
             await Notifications.scheduleNotificationAsync({
               content: {
                 title: '🗑 Evento eliminado',
@@ -91,9 +106,10 @@ const CalendarScreen = () => {
       })
     );
 
-    setEvents(filteredEvents.filter(Boolean));
+    setEvents(filteredEvents.filter(Boolean)); // Guarda sólo eventos vigentes
   };
 
+  // Solicita permisos para acceder al calendario
   const requestPermissions = async () => {
     const { status } = await Calendar.requestCalendarPermissionsAsync();
     if (status === 'granted') {
@@ -103,28 +119,34 @@ const CalendarScreen = () => {
     }
   };
 
+  // Ejecuta al montar el componente: pide permisos
   useEffect(() => {
     requestPermissions();
   }, []);
 
+  // Carga eventos desde la base de datos local al iniciar
   useEffect(() => {
-  useScheduledEventStore.getState().loadEventsFromDB();
-}, []);
+    useScheduledEventStore.getState().loadEventsFromDB();
+  }, []);
 
+  // Carga eventos si ya existe el calendario
   useEffect(() => {
     if (calendarId) loadEvents();
   }, [calendarId]);
 
+  // Refresca eventos al volver a la pantalla
   useFocusEffect(
     useCallback(() => {
       if (calendarId) loadEvents();
     }, [calendarId])
   );
 
+  // Convierte fecha a string local en formato "YYYY-MM-DD"
   const getLocalDateString = (date: Date) => {
     return date.toLocaleDateString('sv-SE');
   };
 
+  // Muestra un diálogo con opciones al tocar un evento
   const handleEventPress = (event: any) => {
     Alert.alert(
       event.title,
@@ -148,7 +170,7 @@ const CalendarScreen = () => {
                   style: 'destructive',
                   onPress: async () => {
                     await Calendar.deleteEventAsync(event.id);
-                    loadEvents();
+                    loadEvents(); // Recarga la lista tras eliminar
                   },
                 },
               ]
@@ -160,6 +182,7 @@ const CalendarScreen = () => {
     );
   };
 
+  // Determina el color del evento según nota
   const getPriorityColor = (note?: string) => {
     if (!note) return 'gray';
     if (note.includes('rojo')) return 'red';
@@ -167,12 +190,14 @@ const CalendarScreen = () => {
     return 'green';
   };
 
+  // Marca en el calendario las fechas con eventos
   const markedDates = events.reduce((acc, event) => {
     const dateStr = getLocalDateString(new Date(event.startDate));
     acc[dateStr] = { marked: true, dotColor: 'red' };
     return acc;
   }, {} as Record<string, any>);
 
+  // Renderiza cada evento en la lista del modal
   const renderItem = ({ item }: { item: any }) => (
     <TouchableOpacity onPress={() => handleEventPress(item)}>
       <View
@@ -191,11 +216,13 @@ const CalendarScreen = () => {
 
   return (
     <View style={styles.container}>
+      {/* Botón para crear nuevo evento */}
       <Button
         title="➕ Crear evento"
         onPress={() => navigation.navigate('CreateEvent')}
       />
 
+      {/* Calendario interactivo */}
       <RNCalendar
         markedDates={{
           ...markedDates,
@@ -209,6 +236,7 @@ const CalendarScreen = () => {
         }}
       />
 
+      {/* Modal que muestra eventos de la fecha seleccionada */}
       <Modal visible={modalVisible} transparent animationType="slide">
         <View style={styles.modal}>
           <View style={styles.modalContent}>
@@ -243,6 +271,7 @@ const CalendarScreen = () => {
 
 export default CalendarScreen;
 
+// Estilos visuales de la pantalla
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16 },
   eventCard: {
