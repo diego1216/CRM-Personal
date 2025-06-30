@@ -1,4 +1,3 @@
-// src/domain/usecases/checkAndNotifyOverdueContacts.ts
 
 import * as Notifications from 'expo-notifications';
 import { useContactStore } from '../../store/contactStore';

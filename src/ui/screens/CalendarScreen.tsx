@@ -15,7 +15,7 @@ import * as Notifications from 'expo-notifications';
 import { Calendar as RNCalendar } from 'react-native-calendars';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
-
+import { useScheduledEventStore } from '../../store/scheduleStore';
 import { RootStackParamList } from '../../presentation/navigation/AppNavigator';
 
 const CalendarScreen = () => {
@@ -106,6 +106,10 @@ const CalendarScreen = () => {
   useEffect(() => {
     requestPermissions();
   }, []);
+
+  useEffect(() => {
+  useScheduledEventStore.getState().loadEventsFromDB();
+}, []);
 
   useEffect(() => {
     if (calendarId) loadEvents();

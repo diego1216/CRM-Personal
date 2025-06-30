@@ -5,4 +5,9 @@ export interface ScheduledEvent {
   priority: 'high' | 'medium' | 'low';
   color: string;
   contactName?: string;
+  importance: string;
 }
+
+
+
+  

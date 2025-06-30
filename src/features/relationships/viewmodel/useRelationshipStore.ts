@@ -1,37 +1,52 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import {
+  saveContactSettings,
+  getAllContactSettings,
+  initDatabase,
+  ContactPriority,
+  PriorityLevel,
+  PriorityColor,
+} from '../../../data/storage/SQLiteService';
 
-export interface RelationshipPriority {
-  id: string;
-  contactId: string;
-  date: string;
-  priority: 'high' | 'medium' | 'low';
-  color: string;
-  daysLimit: number;
+interface RelationshipState {
+  priorities: ContactPriority[];
+  loadPrioritiesFromDB: () => Promise<void>;
+  setPriority: (config: ContactPriority) => Promise<void>;
+  getPriorityByContactId: (id: string) => ContactPriority | undefined;
 }
 
-export interface RelationshipState {
-  priorities: RelationshipPriority[];
-  setPriorityConfig: (config: RelationshipPriority) => void;
-  getPriorityByContactId: (id: string) => RelationshipPriority | undefined;
-}
+export const useRelationshipStore = create<RelationshipState>((set, get) => ({
+  priorities: [],
 
-export const useRelationshipStore = create<RelationshipState>()(
-  persist(
-    (set, get) => ({
-      priorities: [],
+  loadPrioritiesFromDB: async () => {
+    await initDatabase(); 
+    const data = await getAllContactSettings();
+    const normalized = data.map(p => ({
+      contactId: p.contactId,
+      priority: p.priority as PriorityLevel,
+      color: p.color as PriorityColor,
+      daysLimit: p.daysLimit,
+    }));
+    set({ priorities: normalized });
+  },
 
-      setPriorityConfig: (config) => {
-        const existing = get().priorities.filter(p => p.contactId !== config.contactId);
-        set({ priorities: [...existing, config] });
-      },
+  setPriority: async (config) => {
+    await saveContactSettings(
+      config.contactId,
+      config.priority,
+      config.color,
+      config.daysLimit
+    );
+    set((state) => {
+      const updated = state.priorities.filter(p => p.contactId !== config.contactId);
+      return { priorities: [...updated, config] };
+    });
+  },
 
-      getPriorityByContactId: (id) => {
-        return get().priorities.find(p => p.contactId === id);
-      }
-    }),
-    {
-      name: 'relationship-storage',
-    }
-  )
-);
+  getPriorityByContactId: (id) => {
+    return get().priorities.find(p => p.contactId === id);
+  },
+}));
+
+
+export type { ContactPriority as RelationshipPriority };

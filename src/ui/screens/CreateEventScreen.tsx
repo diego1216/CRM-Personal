@@ -85,7 +85,7 @@ export const CreateEventScreen = () => {
       low: 'verde',
     };
 
-    // 🔧 Combinar fecha y hora seleccionadas en un solo objeto
+    
     const combinedStart = new Date(
       selectedDate.getFullYear(),
       selectedDate.getMonth(),
@@ -99,7 +99,7 @@ export const CreateEventScreen = () => {
       startDate: combinedStart,
       endDate: new Date(combinedStart.getTime() + 60 * 60 * 1000), // duración 1h
       notes: `Prioridad: ${priorityMap[priority]}`,
-      // ❌ No se agrega timeZone para evitar desincronización
+     
     });
 
     navigation.goBack();
@@ -151,25 +151,31 @@ export const CreateEventScreen = () => {
         </Picker>
       </View>
 
-      <Button title="Seleccionar fecha" onPress={() => setShowDatePicker(true)} />
-      {showDatePicker && (
-        <DateTimePicker
-          value={selectedDate}
-          mode="date"
-          display="default"
-          onChange={handleDateChange}
-        />
-      )}
+      <View style={{ marginBottom: 12 }}>
+  <Button title="Seleccionar fecha" onPress={() => setShowDatePicker(true)} />
+</View>
 
-      <Button title="Seleccionar hora" onPress={() => setShowTimePicker(true)} />
-      {showTimePicker && (
-        <DateTimePicker
-          value={selectedTime}
-          mode="time"
-          display="default"
-          onChange={handleTimeChange}
-        />
-      )}
+{showDatePicker && (
+  <DateTimePicker
+    value={selectedDate}
+    mode="date"
+    display="default"
+    onChange={handleDateChange}
+  />
+)}
+        
+      <View style={{ marginBottom: 12 }}>
+  <Button title="Seleccionar hora" onPress={() => setShowTimePicker(true)} />
+</View>
+
+{showTimePicker && (
+  <DateTimePicker
+    value={selectedTime}
+    mode="time"
+    display="default"
+    onChange={handleTimeChange}
+  />
+)}
 
       <Text style={{ marginTop: 20 }}>Seleccionar prioridad:</Text>
       <View style={{ flexDirection: 'row', gap: 10, marginVertical: 10 }}>

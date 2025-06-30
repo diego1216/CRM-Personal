@@ -125,31 +125,38 @@ const EditEventScreen = () => {
               key={contact.id}
               label={contact.name}
               value={contact.id}
-              color="black"
+              color="white"
             />
           ))}
         </Picker>
       </View>
 
-      <Button title="Seleccionar fecha" onPress={() => setShowDatePicker(true)} />
-      {showDatePicker && (
-        <DateTimePicker
-          value={selectedDate}
-          mode="date"
-          display="default"
-          onChange={handleDateChange}
-        />
-      )}
+      <View style={{ marginBottom: 12 }}>
+  <Button title="Seleccionar fecha" onPress={() => setShowDatePicker(true)} />
+</View>
 
-      <Button title="Seleccionar hora" onPress={() => setShowTimePicker(true)} />
-      {showTimePicker && (
-        <DateTimePicker
-          value={selectedTime}
-          mode="time"
-          display="default"
-          onChange={handleTimeChange}
-        />
-      )}
+{showDatePicker && (
+  <DateTimePicker
+    value={selectedDate}
+    mode="date"
+    display="default"
+    onChange={handleDateChange}
+  />
+)}
+
+<View style={{ marginBottom: 12 }}>
+  <Button title="Seleccionar hora" onPress={() => setShowTimePicker(true)} />
+</View>
+
+{showTimePicker && (
+  <DateTimePicker
+    value={selectedTime}
+    mode="time"
+    display="default"
+    onChange={handleTimeChange}
+  />
+)}
+
 
       <Text style={{ marginTop: 20 }}>Seleccionar prioridad:</Text>
       <View style={{ flexDirection: 'row', gap: 10, marginVertical: 10 }}>

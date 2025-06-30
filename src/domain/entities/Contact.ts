@@ -1,10 +1,13 @@
+
+import { PhoneNumber } from 'expo-contacts';
+
 export interface Contact {
   id: string;
   name: string;
-  phoneNumbers: { number?: string }[]; 
+  phoneNumbers: PhoneNumber[];
   nextEvent?: {
     date: string;
-    priority: number;
-    color: string;
+    priority: 'Alta' | 'Media' | 'Baja';
+    color: 'red' | 'orange' | 'green';
   };
 }

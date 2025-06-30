@@ -7,6 +7,8 @@ import AppNavigator from './src/presentation/navigation/AppNavigator';
 import { getFCMToken } from './src/data/notification/notifications';
 import { checkAndNotifyOverdueContacts } from './src/domain/usecases/checkAndNotifyOverdueContacts';
 import { registerBackgroundTask } from './src/services/backgroundTask';
+import { initDatabase } from './src/data/storage/SQLiteService';
+import { useRelationshipStore } from './src/features/relationships/viewmodel/useRelationshipStore';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -27,6 +29,13 @@ export default function App() {
   useEffect(() => {
     const initialize = async () => {
       try {
+        
+        await initDatabase();
+        console.log('📁 SQLite lista');
+        await useRelationshipStore.getState().loadPrioritiesFromDB();
+        console.log('📊 Prioridades cargadas desde SQLite');
+
+        // Permisos de notificaciones
         if (Device.isDevice) {
           const { status } = await Notifications.requestPermissionsAsync();
           if (status !== 'granted') {
@@ -35,6 +44,7 @@ export default function App() {
           }
         }
 
+        // Canal para Android
         if (Platform.OS === 'android') {
           await Notifications.setNotificationChannelAsync('default', {
             name: 'default',
@@ -42,21 +52,25 @@ export default function App() {
           });
         }
 
+        // Obtener token FCM
         const fcmToken = await getFCMToken();
         if (fcmToken) {
           if (__DEV__) console.log('Expo Push Token:', fcmToken);
           setExpoPushToken(fcmToken);
         }
 
+        // Notificar contactos vencidos y registrar tarea en background
         checkAndNotifyOverdueContacts();
         await registerBackgroundTask();
+
       } catch (error) {
-        console.error('Error en initNotifications:', error);
+        console.error('Error al inicializar la app:', error);
       }
     };
 
     initialize();
 
+    // Escuchar notificaciones
     notificationListener.current = Notifications.addNotificationReceivedListener(setNotification);
     responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
       console.log('👆 Usuario tocó una notificación:', response);

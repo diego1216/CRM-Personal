@@ -1,24 +1,29 @@
-// Archivo: ContactsScreen.tsx
-
 import React, { useState } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, TextInput, Modal, Button, ActivityIndicator } from 'react-native';
+import {
+  View, Text, FlatList, StyleSheet,
+  TouchableOpacity, TextInput, Modal, Button, ActivityIndicator,
+} from 'react-native';
 import { useContactsViewModel } from '../../features/contacts/viewmodel/ContactsViewModel';
 import { useRelationshipStore } from '../../features/relationships/viewmodel/useRelationshipStore';
+import { PriorityColor, PriorityLevel } from '../../data/storage/SQLiteService';
 
 const priorityOptions = [
   { label: 'Alta', value: 'high', color: 'red' },
   { label: 'Media', value: 'medium', color: 'orange' },
   { label: 'Baja', value: 'low', color: 'green' },
-];
+] as const;
+
+type PriorityValue = typeof priorityOptions[number]['value'];
 
 const ContactsScreen = () => {
   const { contacts, loading, error } = useContactsViewModel();
-  const { setPriorityConfig, getPriorityByContactId } = useRelationshipStore();
+  const { setPriority, getPriorityByContactId } = useRelationshipStore();
+
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedContact, setSelectedContact] = useState<any>(null);
   const [daysLimit, setDaysLimit] = useState('');
-  const [color, setColor] = useState('red');
-  const [priority, setPriority] = useState<'high' | 'medium' | 'low'>('low');
+  const [color, setColor] = useState<PriorityColor>('red');
+  const [selectedPriorityValue, setSelectedPriorityValue] = useState<PriorityValue>('low');
   const [search, setSearch] = useState('');
 
   const filteredContacts = contacts.filter((c) =>
@@ -28,21 +33,26 @@ const ContactsScreen = () => {
   const openModal = (contact: any) => {
     const existing = getPriorityByContactId(contact.id);
     setSelectedContact(contact);
-    setColor(existing?.color || 'red');
-    setPriority(existing?.priority || 'low');
+    setColor((existing?.color || 'red') as PriorityColor);
+
+    const priorityMap: Record<PriorityLevel, PriorityValue> = {
+      Alta: 'high',
+      Media: 'medium',
+      Baja: 'low',
+    };
+
+    setSelectedPriorityValue(priorityMap[existing?.priority || 'Baja']);
     setDaysLimit(existing?.daysLimit?.toString() || '');
     setModalVisible(true);
   };
 
   const savePriority = () => {
     if (selectedContact) {
-      const selected = priorityOptions.find(p => p.value === priority);
-      setPriorityConfig({
-        id: Date.now().toString(),
+      const selected = priorityOptions.find(p => p.value === selectedPriorityValue);
+      setPriority({
         contactId: selectedContact.id,
-        date: new Date().toISOString(),
-        priority,
-        color: selected?.color || 'red',
+        priority: selected?.label as PriorityLevel,
+        color: selected?.color as PriorityColor,
         daysLimit: parseInt(daysLimit, 10) || 0,
       });
     }
@@ -78,11 +88,13 @@ const ContactsScreen = () => {
   return (
     <View style={styles.container}>
       <TextInput
-        placeholder="Buscar contacto..."
-        value={search}
-        onChangeText={setSearch}
-        style={styles.searchInput}
-      />
+  placeholder="Buscar contacto..."
+  placeholderTextColor="black"
+  value={search}
+  onChangeText={setSearch}
+  style={[styles.searchInput, { color: 'black' }]}
+/>
+
 
       <FlatList
         data={filteredContacts}
@@ -110,18 +122,29 @@ const ContactsScreen = () => {
                 style={[
                   styles.colorCircle,
                   { backgroundColor: p.color },
-                  priority === p.value && styles.selectedCircle,
+                  selectedPriorityValue === p.value && styles.selectedCircle,
                 ]}
                 onPress={() => {
-                  setPriority(p.value as 'high' | 'medium' | 'low');
-                  setColor(p.color);
+                  setSelectedPriorityValue(p.value);
+                  setColor(p.color as PriorityColor);
                 }}
               />
             ))}
           </View>
+          <View style={styles.cancelButtonWrapper}>
+  <Button 
+    title="Guardar" 
+    onPress={savePriority} 
+  />
+</View>
 
-          <Button title="Guardar" onPress={savePriority} />
-          <Button title="Cancelar" onPress={() => setModalVisible(false)} color="gray" />
+          <View style={styles.cancelButtonWrapper}>
+            <Button
+              title="CANCELAR"
+              onPress={() => setModalVisible(false)}
+              color="gray"
+            />
+          </View>
         </View>
       </Modal>
     </View>
@@ -159,6 +182,10 @@ const styles = StyleSheet.create({
     borderColor: '#aaa',
     borderWidth: 1,
   },
+
+  cancelButtonWrapper: {
+  marginVertical: 8,
+},
   name: {
     fontWeight: 'bold',
     fontSize: 16,

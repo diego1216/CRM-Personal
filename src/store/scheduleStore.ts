@@ -1,71 +1,48 @@
-// src/store/scheduleStore.ts
-
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import {
+  initDatabase,
+  getEvents,
+  insertEvent,
+  deleteEvent,
+} from '../data/storage/SQLiteService'; 
 
-export type ScheduledEvent = {
+
+export interface ScheduledEvent {
   id: string;
-  contactId: string;
-  contactName: string;
+  title: string;
   datetime: string;
-  priority: number;
-  color: string;
-};
+  contactId: string;
+  priority: 'Alta' | 'Media' | 'Baja'; 
+  color: 'red' | 'orange' | 'green';
+}
 
-type ScheduleState = {
+interface State {
   events: ScheduledEvent[];
+  loadEventsFromDB: () => Promise<void>;
+  addEvent: (event: ScheduledEvent) => Promise<void>;
+  deleteEvent: (id: string) => Promise<void>;
+}
 
-  // Funciones
-  addEvent: (event: Omit<ScheduledEvent, 'id'>) => void;
-  removeEvent: (id: string) => void;
-  updateEvent: (event: ScheduledEvent) => void;
-  cleanPastEvents: () => void;
-};
+export const useScheduledEventStore = create<State>((set) => ({
+  events: [],
 
-export const useScheduledEventStore = create<ScheduleState>()(
-  persist(
-    (set) => ({
-      events: [],
+  loadEventsFromDB: async () => {
+    await initDatabase(); 
+    const events = await getEvents();
+    set({ events });
+  },
 
-      // Agregar un nuevo evento
-      addEvent: (event) => {
-        const newEvent: ScheduledEvent = {
-          ...event,
-          id: Math.random().toString(36).substring(2, 9),
-        };
-        set((state) => ({
-          events: [...state.events, newEvent],
-        }));
-      },
+  addEvent: async (event) => {
+    await insertEvent(event);
+    set((state) => ({
+      events: [...state.events.filter((e) => e.id !== event.id), event],
+    }));
+  },
 
-      // Eliminar evento por ID
-      removeEvent: (id) => {
-        set((state) => ({
-          events: state.events.filter((event) => event.id !== id),
-        }));
-      },
-
-      // Editar un evento existente
-      updateEvent: (updatedEvent) => {
-        set((state) => ({
-          events: state.events.map((event) =>
-            event.id === updatedEvent.id ? updatedEvent : event
-          ),
-        }));
-      },
-
-      // Eliminar eventos pasados (fecha < ahora)
-      cleanPastEvents: () => {
-        const now = new Date().getTime();
-        set((state) => ({
-          events: state.events.filter(
-            (event) => new Date(event.datetime).getTime() > now
-          ),
-        }));
-      },
-    }),
-    {
-      name: 'scheduled-events-store',
-    }
-  )
-);
+  deleteEvent: async (id) => {
+    await deleteEvent(id);
+    set((state) => ({
+      events: state.events.filter((e) => e.id !== id),
+    }));
+  },
+}));

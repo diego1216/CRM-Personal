@@ -13,16 +13,23 @@ import { useRelationshipStore } from '../../features/relationships/viewmodel/use
 const RelationshipDetailScreen = () => {
   const route = useRoute<any>();
   const contactId = route.params?.contactId;
-  const { setPriorityConfig, getPriorityByContactId } = useRelationshipStore();
+  const { setPriority, getPriorityByContactId } = useRelationshipStore();
 
   const existing = getPriorityByContactId(contactId);
 
   const [daysLimit, setDaysLimit] = useState(
     existing?.daysLimit?.toString() || ''
   );
-  const [color, setColor] = useState(existing?.color || 'green');
-  const [priority, setPriority] = useState<'high' | 'medium' | 'low'>(
-    existing?.priority || 'medium'
+  const [color, setColor] = useState<'red' | 'orange' | 'green'>(existing?.color || 'green');
+  const [priority, setPriorityValue] = useState<'high' | 'medium' | 'low'>(
+    (() => {
+      switch (existing?.priority) {
+        case 'Alta': return 'high';
+        case 'Media': return 'medium';
+        case 'Baja': return 'low';
+        default: return 'medium';
+      }
+    })()
   );
 
   const handleSave = () => {
@@ -31,13 +38,17 @@ const RelationshipDetailScreen = () => {
       return;
     }
 
-    setPriorityConfig({
-      id: Date.now().toString(),
+    const mappedPriority = priority === 'high'
+      ? 'Alta'
+      : priority === 'medium'
+        ? 'Media'
+        : 'Baja';
+
+    setPriority({
       contactId,
-      date: new Date().toISOString(),
-      priority,
+      priority: mappedPriority,
       color,
-      daysLimit: parseInt(daysLimit),
+      daysLimit: parseInt(daysLimit, 10),
     });
 
     Alert.alert('✅ Relación actualizada correctamente');
@@ -72,8 +83,8 @@ const RelationshipDetailScreen = () => {
               },
             ]}
             onPress={() => {
-              setPriority(item.value as 'high' | 'medium' | 'low');
-              setColor(item.color);
+              setPriorityValue(item.value as 'high' | 'medium' | 'low');
+              setColor(item.color as 'red' | 'orange' | 'green');
             }}
           >
             <Text style={{ color: priority === item.value ? '#fff' : '#000' }}>

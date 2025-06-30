@@ -16,7 +16,7 @@ const HomeScreen = () => {
 
       <View style={styles.buttonGroup}>
         <PrimaryButton
-          label="Ver Contactos"
+          label="Ver Contactos  📞"
           onPress={() => navigation.navigate('Contacts')}
         />
         <PrimaryButton

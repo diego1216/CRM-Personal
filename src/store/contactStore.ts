@@ -1,4 +1,4 @@
-// src/store/contactStore.ts
+
 import { create } from 'zustand';
 import type { Contact } from '../domain/entities/Contact';
 

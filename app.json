@@ -18,7 +18,7 @@
         "READ_CALENDAR",
         "WRITE_CALENDAR",
         "NOTIFICATIONS",
-        "READ_CALENDAR", 
+        "READ_CALENDAR",
         "WRITE_CALENDAR"
       ],
       "googleServicesFile": "./google-services.json",
@@ -35,6 +35,9 @@
         "projectId": "dba6a23e-589b-4624-9754-b3cd7787cbbf"
       }
     },
-    "owner": "diegolopezarana"
+    "owner": "diegolopezarana",
+    "plugins": [
+      "expo-sqlite"
+    ]
   }
 }

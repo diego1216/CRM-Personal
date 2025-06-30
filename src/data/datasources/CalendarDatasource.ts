@@ -8,7 +8,7 @@ export interface RawEvent {
   calendarId: string;
 }
 
-// Solicita permiso y devuelve eventos de los próximos 7 días
+
 export async function getUpcomingEvents(daysAhead = 7): Promise<RawEvent[]> {
   const { status } = await Calendar.requestCalendarPermissionsAsync();
   if (status !== 'granted') throw new Error('Permiso de calendario denegado');

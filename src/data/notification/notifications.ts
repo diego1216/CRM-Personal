@@ -1,7 +1,7 @@
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 
-// Configuración del manejador para notificaciones entrantes
+
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -12,7 +12,7 @@ Notifications.setNotificationHandler({
   }),
 });
 
-// Función para registrar y obtener token
+
 export async function getFCMToken(): Promise<string | null> {
   if (!Device.isDevice) {
     alert('Debes usar un dispositivo físico para recibir notificaciones push.');

@@ -24,6 +24,13 @@ export const useContactsViewModel = () => {
             .filter(e => e.contactId === contact.id)
             .sort((a, b) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime())[0];
 
+          const color = upcoming?.color || 'gray';
+          const priority = color === 'red'
+            ? 'Alta'
+            : color === 'orange'
+            ? 'Media'
+            : 'Baja';
+
           return {
             id: contact.id,
             name: contact.name,
@@ -31,8 +38,8 @@ export const useContactsViewModel = () => {
             nextEvent: upcoming
               ? {
                   date: upcoming.datetime,
-                  priority: upcoming.priority,
-                  color: upcoming.color,
+                  priority,
+                  color: upcoming.color as 'red' | 'orange' | 'green',
                 }
               : undefined,
           };
