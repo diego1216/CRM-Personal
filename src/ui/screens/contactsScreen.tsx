@@ -99,10 +99,11 @@ const ContactsScreen = () => {
             )}
             {/* Muestra cada cuántos días contactar si tiene prioridad */}
             {priority && (
-              <Text style={styles.days}>
-              🔔 Cada {priority.daysLimit} días
-              </Text>
-            )}
+  <Text style={styles.days}>
+    🔔 Cada {priority.daysLimit} días
+  </Text>
+)}
+
           </View>
         </View>
       </TouchableOpacity>
